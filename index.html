@@ -141,6 +141,12 @@
         // Konstante für die Liefergebühr
         const DELIVERY_FEE = 0.10; // 10 Cent
 
+        // NEU: Die User ID von Johannes für Admin-Funktionen
+        // BITTE ERSETZE 'DEINE_JOHANNES_UID_HIER' MIT DEINER TATSÄCHLICHEN USER ID,
+        // DIE OBEN AUF DER SEITE ANGEZEIGT WIRD, NACHDEM DU DICH ANONYM ANGEMELDET HAST.
+        // Beispiel: '7LWBACpvaKdHOxDJDqMmd1kiT5y1'
+        const ADMIN_UID = '7LW8aCpvaKdHOxDJDqMmd1kiT5y1'; 
+
         try {
             app = initializeApp(firebaseConfig);
             db = getFirestore(app);
@@ -162,7 +168,7 @@
         // --- DOM Elements ---
         const customerNameInput = document.getElementById('customerName');
         const orderDetailsInput = document.getElementById('orderDetails');
-        const itemPriceInput = document.getElementById('itemPrice'); // NEU: Input-Feld für den Preis
+        const itemPriceInput = document.getElementById('itemPrice');
         const submitOrderButton = document.getElementById('submitOrder');
         const ordersContainer = document.getElementById('ordersContainer');
         const userIdDisplay = document.getElementById('userIdDisplay');
@@ -238,14 +244,12 @@
         async function addOrder() {
             const name = customerNameInput.value.trim();
             const details = orderDetailsInput.value.trim();
-            // NEU: Preis des Artikels aus dem Input-Feld holen und als Zahl parsen
             const itemPrice = parseFloat(itemPriceInput.value);
 
             if (!name || !details) {
                 showModal("Bitte gib sowohl deinen Namen als auch deine Bestellung ein.", () => {});
                 return;
             }
-            // NEU: Prüfen, ob der Preis gültig ist
             if (isNaN(itemPrice) || itemPrice < 0) {
                 showModal("Bitte gib einen gültigen Preis für den Artikel ein (z.B. 1.50).", () => {});
                 return;
@@ -261,14 +265,14 @@
                 await addDoc(ordersCollection, {
                     customerName: name,
                     orderDetails: details,
-                    itemPrice: itemPrice, // NEU: Artikelpreis speichern
+                    itemPrice: itemPrice,
                     isPaid: false,
                     createdAt: serverTimestamp(),
                     orderedByUserId: currentUserId
                 });
                 customerNameInput.value = '';
                 orderDetailsInput.value = '';
-                itemPriceInput.value = ''; // NEU: Preis-Feld leeren
+                itemPriceInput.value = '';
                 console.log("Order added successfully!");
             } catch (error) {
                 console.error("Error adding order: ", error);
@@ -327,17 +331,15 @@
             detailsEl.className = 'text-gray-700 my-1';
             detailsEl.textContent = order.orderDetails;
 
-            // NEU: Artikelpreis anzeigen
             const itemPriceEl = document.createElement('p');
             itemPriceEl.className = 'text-sm text-gray-600';
-            const formattedItemPrice = (order.itemPrice || 0).toFixed(2).replace('.', ','); // Formatierung für Euro
+            const formattedItemPrice = (order.itemPrice || 0).toFixed(2).replace('.', ',');
             itemPriceEl.textContent = `Artikelpreis: ${formattedItemPrice} €`;
 
-            // NEU: Gesamtpreis berechnen und anzeigen
             const totalPrice = (order.itemPrice || 0) + DELIVERY_FEE;
             const totalPriceEl = document.createElement('p');
             totalPriceEl.className = 'text-md font-bold text-indigo-700 mt-1';
-            const formattedTotalPrice = totalPrice.toFixed(2).replace('.', ','); // Formatierung für Euro
+            const formattedTotalPrice = totalPrice.toFixed(2).replace('.', ',');
             totalPriceEl.textContent = `Gesamtpreis: ${formattedTotalPrice} €`;
 
             const feeEl = document.createElement('p');
@@ -348,26 +350,6 @@
             const statusEl = document.createElement('p');
             statusEl.className = `text-sm font-medium ${order.isPaid ? 'text-green-600' : 'text-red-600'}`;
             statusEl.textContent = order.isPaid ? 'Bezahlt' : 'Noch nicht bezahlt';
-
-            const togglePaidButton = document.createElement('button');
-            togglePaidButton.textContent = order.isPaid ? 'Als unbezahlt markieren' : 'Als bezahlt markieren';
-            togglePaidButton.className = `mt-3 py-2 px-3 text-xs font-medium rounded-md transition-colors ${order.isPaid ? 'bg-yellow-400 hover:bg-yellow-500 text-yellow-800' : 'bg-green-500 hover:bg-green-600 text-white'}`;
-            togglePaidButton.onclick = () => {
-                showModal(
-                    `Möchtest du den Status für ${order.customerName}'s Bestellung wirklich ändern?`,
-                    () => togglePaidStatus(orderId, order.isPaid)
-                );
-            };
-
-            const deleteButton = document.createElement('button');
-            deleteButton.textContent = 'Löschen';
-            deleteButton.className = 'mt-3 ml-2 py-2 px-3 text-xs font-medium rounded-md bg-red-500 hover:bg-red-600 text-white transition-colors';
-            deleteButton.onclick = () => {
-                showModal(
-                    `Möchtest du die Bestellung von ${order.customerName} wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.`,
-                    () => deleteOrder(orderId)
-                );
-            };
 
             const timestampEl = document.createElement('p');
             timestampEl.className = 'text-xs text-gray-500 mt-2';
@@ -380,13 +362,36 @@
 
             orderDiv.appendChild(nameEl);
             orderDiv.appendChild(detailsEl);
-            orderDiv.appendChild(itemPriceEl); // NEU: Artikelpreis hinzufügen
+            orderDiv.appendChild(itemPriceEl);
             orderDiv.appendChild(feeEl);
-            orderDiv.appendChild(totalPriceEl); // NEU: Gesamtpreis hinzufügen
+            orderDiv.appendChild(totalPriceEl);
             orderDiv.appendChild(statusEl);
             orderDiv.appendChild(timestampEl);
-            orderDiv.appendChild(togglePaidButton);
-            orderDiv.appendChild(deleteButton);
+
+            // NEU: Buttons nur anzeigen, wenn der aktuelle Benutzer der Admin ist
+            if (currentUserId === ADMIN_UID) {
+                const togglePaidButton = document.createElement('button');
+                togglePaidButton.textContent = order.isPaid ? 'Als unbezahlt markieren' : 'Als bezahlt markieren';
+                togglePaidButton.className = `mt-3 py-2 px-3 text-xs font-medium rounded-md transition-colors ${order.isPaid ? 'bg-yellow-400 hover:bg-yellow-500 text-yellow-800' : 'bg-green-500 hover:bg-green-600 text-white'}`;
+                togglePaidButton.onclick = () => {
+                    showModal(
+                        `Möchtest du den Status für ${order.customerName}'s Bestellung wirklich ändern?`,
+                        () => togglePaidStatus(orderId, order.isPaid)
+                    );
+                };
+
+                const deleteButton = document.createElement('button');
+                deleteButton.textContent = 'Löschen';
+                deleteButton.className = 'mt-3 ml-2 py-2 px-3 text-xs font-medium rounded-md bg-red-500 hover:bg-red-600 text-white transition-colors';
+                deleteButton.onclick = () => {
+                    showModal(
+                        `Möchtest du die Bestellung von ${order.customerName} wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.`,
+                        () => deleteOrder(orderId)
+                    );
+                };
+                orderDiv.appendChild(togglePaidButton);
+                orderDiv.appendChild(deleteButton);
+            }
 
             ordersContainer.appendChild(orderDiv);
         }
