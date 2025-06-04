@@ -89,7 +89,7 @@
                 <p>Noch keine Bestellungen vorhanden. Sei der Erste!</p>
             </div>
             <div id="ordersContainer" class="space-y-4">
-                </div>
+            </div>
         </section>
     </div>
 
@@ -132,6 +132,8 @@
         let db;
         let auth;
         let ordersCollection; // Definieren, damit es global verfügbar ist
+        // NEU: ordersCollectionPath als String definieren
+        let ordersCollectionPath = `artifacts/${firebaseConfig.appId}/public/data/lieferdienstNellOrders`;
         let currentUserId = null;
 
         try {
@@ -142,7 +144,7 @@
             console.log("Firebase App initialized successfully.");
 
             // Initialisiere die Collection-Referenz hier, nachdem 'app' initialisiert wurde
-            ordersCollection = collection(db, `artifacts/${firebaseConfig.appId}/public/data/lieferdienstNellOrders`);
+            ordersCollection = collection(db, ordersCollectionPath); // Nutze die neu definierte Variable
             console.log("Orders collection reference created successfully.");
 
         } catch (error) {
@@ -198,26 +200,28 @@
         // Function to show modal
         function showModal(message, onConfirm) {
             modalMessage.textContent = message;
-            currentAction = onConfirm;
+            currentAction = onConfirm; // Store the function to be executed on confirm
             confirmationModal.style.display = "block";
+            // Optional: Fokus auf den "Ja"-Button setzen für bessere UX
+            confirmActionButton.focus();
         }
 
         // Function to hide modal
         function hideModal() {
             confirmationModal.style.display = "none";
-            currentAction = null;
+            currentAction = null; // Reset action
         }
 
         // Event listeners for modal buttons
         confirmActionButton.addEventListener('click', () => {
             if (currentAction) {
-                currentAction();
+                currentAction(); // Execute the stored action
             }
-            hideModal();
+            hideModal(); // Always hide modal after action
         });
 
         cancelActionButton.addEventListener('click', () => {
-            hideModal();
+            hideModal(); // Just hide modal on cancel
         });
 
         // Close modal if clicked outside of it
@@ -334,7 +338,7 @@
             deleteButton.textContent = 'Löschen';
             deleteButton.className = 'mt-3 ml-2 py-2 px-3 text-xs font-medium rounded-md bg-red-500 hover:bg-red-600 text-white transition-colors';
             deleteButton.onclick = () => {
-                 showModal(
+                showModal(
                     `Möchtest du die Bestellung von ${order.customerName} wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.`,
                     () => deleteOrder(orderId)
                 );
@@ -343,9 +347,9 @@
             const timestampEl = document.createElement('p');
             timestampEl.className = 'text-xs text-gray-500 mt-2';
             if (order.createdAt && order.createdAt.toDate) {
-                 timestampEl.textContent = `Bestellt am: ${order.createdAt.toDate().toLocaleString('de-DE')}`;
+                timestampEl.textContent = `Bestellt am: ${order.createdAt.toDate().toLocaleString('de-DE')}`;
             } else {
-                 timestampEl.textContent = `Bestellzeitpunkt unbekannt`;
+                timestampEl.textContent = `Bestellzeitpunkt unbekannt`;
             }
 
 
@@ -366,6 +370,7 @@
                 console.error("Orders collection is not initialized.");
                 return;
             }
+            // Korrigiert: Nutze ordersCollection direkt oder den Pfad
             const orderRef = doc(db, ordersCollectionPath, orderId);
             try {
                 await updateDoc(orderRef, {
@@ -374,7 +379,8 @@
                 console.log("Payment status updated for order:", orderId);
             } catch (error) {
                 console.error("Error updating payment status: ", error);
-                showModal("Fehler beim Aktualisieren des Zahlungsstatus.", () => {});
+                // Zeige den Fehler auch im Modal an
+                showModal(`Fehler beim Aktualisieren des Zahlungsstatus: ${error.message}`, () => {});
             }
         }
 
@@ -384,13 +390,15 @@
                 console.error("Orders collection is not initialized.");
                 return;
             }
+            // Korrigiert: Nutze ordersCollection direkt oder den Pfad
             const orderRef = doc(db, ordersCollectionPath, orderId);
             try {
                 await deleteDoc(orderRef);
                 console.log("Order deleted:", orderId);
             } catch (error) {
                 console.error("Error deleting order: ", error);
-                showModal("Fehler beim Löschen der Bestellung.", () => {});
+                // Zeige den Fehler auch im Modal an
+                showModal(`Fehler beim Löschen der Bestellung: ${error.message}`, () => {});
             }
         }
 
