@@ -141,11 +141,12 @@
         // Konstante für die Liefergebühr
         const DELIVERY_FEE = 0.10; // 10 Cent
 
-        // NEU: Die User ID von Johannes für Admin-Funktionen
-        // BITTE ERSETZE 'DEINE_JOHANNES_UID_HIER' MIT DEINER TATSÄCHLICHEN USER ID,
-        // DIE OBEN AUF DER SEITE ANGEZEIGT WIRD, NACHDEM DU DICH ANONYM ANGEMELDET HAST.
-        // Beispiel: '7LWBACpvaKdHOxDJDqMmd1kiT5y1'
-        const ADMIN_UID = '7LW8aCpvaKdHOxDJDqMmd1kiT5y1'; 
+        // NEU: Ein Array von User IDs für Admin-Funktionen
+        // Füge hier alle User IDs hinzu, die Admin-Rechte haben sollen.
+        // BITTE ERSETZE 'DEINE_JOHANNES_UID_1_HIER' UND 'DEINE_JOHANNES_UID_2_HIER'
+        // MIT DEN TATSÄCHLICHEN USER IDs.
+        // Beispiel: const ADMIN_UIDS = ['7LWBACpvaKdHOxDJDqMmd1kiT5y1', 'ANDERE_ADMIN_UID_HIER'];
+        const ADMIN_UIDS = ['7LW8aCpvaKdHOxDJDqMmd1kiT5y1', 'oXsY6EHMPmb20t07XGtN7cHLT3z2']; 
 
         try {
             app = initializeApp(firebaseConfig);
@@ -290,7 +291,7 @@
                 return;
             }
             if (!ordersCollection) {
-                console.error("Orders collection is not initialized. Cannot load orders.");
+                console.error("Orders collection is not initialized.");
                 loadingOrdersDiv.textContent = "Fehler beim Laden der Bestellungen (DB nicht bereit).";
                 return;
             }
@@ -368,8 +369,9 @@
             orderDiv.appendChild(statusEl);
             orderDiv.appendChild(timestampEl);
 
-            // NEU: Buttons nur anzeigen, wenn der aktuelle Benutzer der Admin ist
-            if (currentUserId === ADMIN_UID) {
+            // NEU: Buttons nur anzeigen, wenn der aktuelle Benutzer ein Admin ist
+            // currentUserId muss in ADMIN_UIDS enthalten sein
+            if (ADMIN_UIDS.includes(currentUserId)) {
                 const togglePaidButton = document.createElement('button');
                 togglePaidButton.textContent = order.isPaid ? 'Als unbezahlt markieren' : 'Als bezahlt markieren';
                 togglePaidButton.className = `mt-3 py-2 px-3 text-xs font-medium rounded-md transition-colors ${order.isPaid ? 'bg-yellow-400 hover:bg-yellow-500 text-yellow-800' : 'bg-green-500 hover:bg-green-600 text-white'}`;
