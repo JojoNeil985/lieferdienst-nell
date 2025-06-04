@@ -72,6 +72,11 @@
                     <label for="orderDetails" class="block text-sm font-medium text-gray-700">Deine Bestellung:</label>
                     <textarea id="orderDetails" name="orderDetails" rows="3" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="z.B. 1x Cola, 2x Mannerschnitten"></textarea>
                 </div>
+                <!-- NEU: Input-Feld für den Artikelpreis -->
+                <div>
+                    <label for="itemPrice" class="block text-sm font-medium text-gray-700">Preis des Artikels (€):</label>
+                    <input type="number" id="itemPrice" name="itemPrice" step="0.01" min="0" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="z.B. 1.50">
+                </div>
                 <button id="submitOrder" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg shadow-md transition duration-150 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50">
                     Bestellung abschicken
                 </button>
@@ -113,8 +118,6 @@
         import { getAuth, signInAnonymously, onAuthStateChanged, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, serverTimestamp, query, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        // getAnalytics wird hier nicht direkt verwendet, falls du es doch brauchst, füge es hinzu
-        // import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-analytics.js";
 
         // Your web app's Firebase configuration
         const firebaseConfig = {
@@ -127,24 +130,25 @@
             measurementId: "G-Y06HR8YKHC"
         };
 
-        // Initialize Firebase (jetzt nur einmal und korrekt)
+        // Initialize Firebase
         let app;
         let db;
         let auth;
-        let ordersCollection; // Definieren, damit es global verfügbar ist
-        // NEU: ordersCollectionPath als String definieren
+        let ordersCollection;
         let ordersCollectionPath = `artifacts/${firebaseConfig.appId}/public/data/lieferdienstNellOrders`;
         let currentUserId = null;
+
+        // Konstante für die Liefergebühr
+        const DELIVERY_FEE = 0.10; // 10 Cent
 
         try {
             app = initializeApp(firebaseConfig);
             db = getFirestore(app);
             auth = getAuth(app);
-            setLogLevel('debug'); // Für detailliertere Logs in der Konsole
+            setLogLevel('debug');
             console.log("Firebase App initialized successfully.");
 
-            // Initialisiere die Collection-Referenz hier, nachdem 'app' initialisiert wurde
-            ordersCollection = collection(db, ordersCollectionPath); // Nutze die neu definierte Variable
+            ordersCollection = collection(db, ordersCollectionPath);
             console.log("Orders collection reference created successfully.");
 
         } catch (error) {
@@ -158,6 +162,7 @@
         // --- DOM Elements ---
         const customerNameInput = document.getElementById('customerName');
         const orderDetailsInput = document.getElementById('orderDetails');
+        const itemPriceInput = document.getElementById('itemPrice'); // NEU: Input-Feld für den Preis
         const submitOrderButton = document.getElementById('submitOrder');
         const ordersContainer = document.getElementById('ordersContainer');
         const userIdDisplay = document.getElementById('userIdDisplay');
@@ -170,7 +175,7 @@
         const modalMessage = document.getElementById('modalMessage');
         const confirmActionButton = document.getElementById('confirmAction');
         const cancelActionButton = document.getElementById('cancelAction');
-        let currentAction = null; // To store the action to be confirmed
+        let currentAction = null;
 
         // --- Authentication ---
         onAuthStateChanged(auth, async (user) => {
@@ -178,14 +183,12 @@
                 currentUserId = user.uid;
                 userIdDisplay.textContent = currentUserId;
                 console.log("User is signed in with UID:", currentUserId);
-                loadOrders(); // Lade Bestellungen, sobald der User eingeloggt ist
+                loadOrders();
             } else {
                 console.log("User is signed out. Attempting to sign in anonymously...");
                 userIdDisplay.textContent = "Authentifizierung...";
                 try {
                     await setPersistence(auth, browserLocalPersistence);
-                    // Die initialAuthToken Variable existiert nicht in diesem Kontext,
-                    // daher melden wir uns direkt anonym an.
                     await signInAnonymously(auth);
                     console.log("Anonymous sign in successful.");
                 } catch (error) {
@@ -200,28 +203,27 @@
         // Function to show modal
         function showModal(message, onConfirm) {
             modalMessage.textContent = message;
-            currentAction = onConfirm; // Store the function to be executed on confirm
+            currentAction = onConfirm;
             confirmationModal.style.display = "block";
-            // Optional: Fokus auf den "Ja"-Button setzen für bessere UX
             confirmActionButton.focus();
         }
 
         // Function to hide modal
         function hideModal() {
             confirmationModal.style.display = "none";
-            currentAction = null; // Reset action
+            currentAction = null;
         }
 
         // Event listeners for modal buttons
         confirmActionButton.addEventListener('click', () => {
             if (currentAction) {
-                currentAction(); // Execute the stored action
+                currentAction();
             }
-            hideModal(); // Always hide modal after action
+            hideModal();
         });
 
         cancelActionButton.addEventListener('click', () => {
-            hideModal(); // Just hide modal on cancel
+            hideModal();
         });
 
         // Close modal if clicked outside of it
@@ -236,11 +238,19 @@
         async function addOrder() {
             const name = customerNameInput.value.trim();
             const details = orderDetailsInput.value.trim();
+            // NEU: Preis des Artikels aus dem Input-Feld holen und als Zahl parsen
+            const itemPrice = parseFloat(itemPriceInput.value);
 
             if (!name || !details) {
-                showModal("Bitte gib sowohl deinen Namen als auch deine Bestellung ein.", () => {}); // Leere onConfirm, da nur Info
+                showModal("Bitte gib sowohl deinen Namen als auch deine Bestellung ein.", () => {});
                 return;
             }
+            // NEU: Prüfen, ob der Preis gültig ist
+            if (isNaN(itemPrice) || itemPrice < 0) {
+                showModal("Bitte gib einen gültigen Preis für den Artikel ein (z.B. 1.50).", () => {});
+                return;
+            }
+
             if (!ordersCollection) {
                 console.error("Orders collection is not initialized.");
                 showModal("Fehler: Datenbankverbindung nicht bereit.", () => {});
@@ -251,12 +261,14 @@
                 await addDoc(ordersCollection, {
                     customerName: name,
                     orderDetails: details,
+                    itemPrice: itemPrice, // NEU: Artikelpreis speichern
                     isPaid: false,
-                    createdAt: serverTimestamp(), // Für Sortierung
-                    orderedByUserId: currentUserId // Optional: Wer hat die Bestellung aufgegeben
+                    createdAt: serverTimestamp(),
+                    orderedByUserId: currentUserId
                 });
                 customerNameInput.value = '';
                 orderDetailsInput.value = '';
+                itemPriceInput.value = ''; // NEU: Preis-Feld leeren
                 console.log("Order added successfully!");
             } catch (error) {
                 console.error("Error adding order: ", error);
@@ -270,7 +282,7 @@
                 console.log("User not authenticated yet. Waiting for auth state change.");
                 loadingOrdersDiv.classList.remove('hidden');
                 noOrdersDiv.classList.add('hidden');
-                ordersContainer.innerHTML = ''; // Clear previous orders
+                ordersContainer.innerHTML = '';
                 return;
             }
             if (!ordersCollection) {
@@ -279,17 +291,16 @@
                 return;
             }
 
-            // Query mit Sortierung nach Erstellungsdatum (neueste zuerst)
             const q = query(ordersCollection, orderBy("createdAt", "desc"));
 
             onSnapshot(q, (snapshot) => {
                 loadingOrdersDiv.classList.add('hidden');
                 if (snapshot.empty) {
                     noOrdersDiv.classList.remove('hidden');
-                    ordersContainer.innerHTML = ''; // Clear if there were old orders
+                    ordersContainer.innerHTML = '';
                 } else {
                     noOrdersDiv.classList.add('hidden');
-                    ordersContainer.innerHTML = ''; // Clear existing orders before re-rendering
+                    ordersContainer.innerHTML = '';
                     snapshot.docs.forEach(docSnapshot => {
                         const order = docSnapshot.data();
                         const orderId = docSnapshot.id;
@@ -316,9 +327,23 @@
             detailsEl.className = 'text-gray-700 my-1';
             detailsEl.textContent = order.orderDetails;
 
+            // NEU: Artikelpreis anzeigen
+            const itemPriceEl = document.createElement('p');
+            itemPriceEl.className = 'text-sm text-gray-600';
+            const formattedItemPrice = (order.itemPrice || 0).toFixed(2).replace('.', ','); // Formatierung für Euro
+            itemPriceEl.textContent = `Artikelpreis: ${formattedItemPrice} €`;
+
+            // NEU: Gesamtpreis berechnen und anzeigen
+            const totalPrice = (order.itemPrice || 0) + DELIVERY_FEE;
+            const totalPriceEl = document.createElement('p');
+            totalPriceEl.className = 'text-md font-bold text-indigo-700 mt-1';
+            const formattedTotalPrice = totalPrice.toFixed(2).replace('.', ','); // Formatierung für Euro
+            totalPriceEl.textContent = `Gesamtpreis: ${formattedTotalPrice} €`;
+
             const feeEl = document.createElement('p');
             feeEl.className = 'text-sm text-emerald-700 font-medium';
-            feeEl.textContent = `(+ 0,10 € Liefergebühr)`;
+            feeEl.textContent = `(+ ${DELIVERY_FEE.toFixed(2).replace('.', ',')} € Liefergebühr)`;
+
 
             const statusEl = document.createElement('p');
             statusEl.className = `text-sm font-medium ${order.isPaid ? 'text-green-600' : 'text-red-600'}`;
@@ -355,7 +380,9 @@
 
             orderDiv.appendChild(nameEl);
             orderDiv.appendChild(detailsEl);
+            orderDiv.appendChild(itemPriceEl); // NEU: Artikelpreis hinzufügen
             orderDiv.appendChild(feeEl);
+            orderDiv.appendChild(totalPriceEl); // NEU: Gesamtpreis hinzufügen
             orderDiv.appendChild(statusEl);
             orderDiv.appendChild(timestampEl);
             orderDiv.appendChild(togglePaidButton);
@@ -370,7 +397,6 @@
                 console.error("Orders collection is not initialized.");
                 return;
             }
-            // Korrigiert: Nutze ordersCollection direkt oder den Pfad
             const orderRef = doc(db, ordersCollectionPath, orderId);
             try {
                 await updateDoc(orderRef, {
@@ -379,7 +405,6 @@
                 console.log("Payment status updated for order:", orderId);
             } catch (error) {
                 console.error("Error updating payment status: ", error);
-                // Zeige den Fehler auch im Modal an
                 showModal(`Fehler beim Aktualisieren des Zahlungsstatus: ${error.message}`, () => {});
             }
         }
@@ -390,14 +415,12 @@
                 console.error("Orders collection is not initialized.");
                 return;
             }
-            // Korrigiert: Nutze ordersCollection direkt oder den Pfad
             const orderRef = doc(db, ordersCollectionPath, orderId);
             try {
                 await deleteDoc(orderRef);
                 console.log("Order deleted:", orderId);
             } catch (error) {
                 console.error("Error deleting order: ", error);
-                // Zeige den Fehler auch im Modal an
                 showModal(`Fehler beim Löschen der Bestellung: ${error.message}`, () => {});
             }
         }
