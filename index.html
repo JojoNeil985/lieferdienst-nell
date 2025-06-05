@@ -68,15 +68,27 @@
                     <label for="customerName" class="block text-sm font-medium text-gray-700">Dein Name:</label>
                     <input type="text" id="customerName" name="customerName" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="Max Mustermann">
                 </div>
+
+                <!-- NEU: Dropdown für beliebte Produkte -->
                 <div>
-                    <label for="orderDetails" class="block text-sm font-medium text-gray-700">Deine Bestellung:</label>
-                    <textarea id="orderDetails" name="orderDetails" rows="3" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="z.B. 1x Cola, 2x Mannerschnitten"></textarea>
+                    <label for="popularItem" class="block text-sm font-medium text-gray-700">Wähle ein Produkt:</label>
+                    <select id="popularItem" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                        <!-- Optionen werden von JavaScript generiert -->
+                    </select>
                 </div>
-                <!-- NEU: Input-Feld für den Artikelpreis -->
-                <div>
-                    <label for="itemPrice" class="block text-sm font-medium text-gray-700">Preis des Artikels (€):</label>
-                    <input type="number" id="itemPrice" name="itemPrice" step="0.01" min="0" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="z.B. 1.50">
+
+                <!-- Bereich für Sonstiges/eigene Eingabe, standardmäßig versteckt -->
+                <div id="otherItemInputs" class="space-y-4 hidden">
+                    <div>
+                        <label for="orderDetails" class="block text-sm font-medium text-gray-700">Deine Bestellung (genauere Details):</label>
+                        <textarea id="orderDetails" name="orderDetails" rows="3" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="z.B. 1x Cola, 2x Mannerschnitten"></textarea>
+                    </div>
+                    <div>
+                        <label for="itemPrice" class="block text-sm font-medium text-gray-700">Preis des Artikels (€):</label>
+                        <input type="number" id="itemPrice" name="itemPrice" step="0.01" min="0" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="z.B. 1.50">
+                    </div>
                 </div>
+                
                 <button id="submitOrder" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg shadow-md transition duration-150 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50">
                     Bestellung abschicken
                 </button>
@@ -141,12 +153,20 @@
         // Konstante für die Liefergebühr
         const DELIVERY_FEE = 0.10; // 10 Cent
 
-        // NEU: Ein Array von User IDs für Admin-Funktionen
-        // Füge hier alle User IDs hinzu, die Admin-Rechte haben sollen.
+        // Array von User IDs für Admin-Funktionen
         // BITTE ERSETZE 'DEINE_JOHANNES_UID_1_HIER' UND 'DEINE_JOHANNES_UID_2_HIER'
-        // MIT DEN TATSÄCHLICHEN USER IDs.
-        // Beispiel: const ADMIN_UIDS = ['7LWBACpvaKdHOxDJDqMmd1kiT5y1', 'ANDERE_ADMIN_UID_HIER'];
-        const ADMIN_UIDS = ['7LW8aCpvaKdHOxDJDqMmd1kiT5y1', 'oXsY6EHMPmb20t07XGtN7cHLT3z2']; 
+        // MIT DEN TATSÄCHLICHEN USER IDs, die Admin-Rechte haben sollen.
+        const ADMIN_UIDS = ['7LWBACpvaKdHOxDJDqMmd1kiT5y1', 'oXsY6EHMPmb20t07XGtN7cHLT3z2']; 
+
+        // NEU: Beliebte Produkte mit Preisen
+        const POPULAR_ITEMS = [
+            { name: "Wähle ein Produkt...", price: 0, isPlaceholder: true },
+            { name: "Coca Cola Normal", price: 1.35 },
+            { name: "Lemon Spritz", price: 0.45 },
+            { name: "Mannerschnitten", price: 0.70 },
+            { name: "Mineralwasser Still", price: 0.90 },
+            { name: "Sonstiges...", price: 0, isOther: true }
+        ];
 
         try {
             app = initializeApp(firebaseConfig);
@@ -177,6 +197,10 @@
         const noOrdersDiv = document.getElementById('noOrders');
         document.getElementById('currentYear').textContent = new Date().getFullYear();
 
+        // NEU: DOM-Elemente für das Dropdown und den "Sonstiges"-Bereich
+        const popularItemSelect = document.getElementById('popularItem');
+        const otherItemInputsDiv = document.getElementById('otherItemInputs');
+
         // Modal elements
         const confirmationModal = document.getElementById('confirmationModal');
         const modalMessage = document.getElementById('modalMessage');
@@ -206,6 +230,45 @@
         });
 
         // --- Functions ---
+
+        // NEU: Funktion zum Befüllen des Dropdowns
+        function populatePopularItemsDropdown() {
+            popularItemSelect.innerHTML = ''; // Vorherige Optionen löschen
+            POPULAR_ITEMS.forEach((item, index) => {
+                const option = document.createElement('option');
+                option.value = index; // Index als Wert verwenden, um auf das Objekt im Array zuzugreifen
+                option.textContent = item.isPlaceholder ? item.name : `${item.name} ${item.price.toFixed(2).replace('.', ',')}€`;
+                if (item.isPlaceholder) {
+                    option.disabled = true; // Placeholder nicht wählbar machen
+                    option.selected = true; // Standardmäßig ausgewählt
+                }
+                popularItemSelect.appendChild(option);
+            });
+            // Initialen Zustand setzen
+            handlePopularItemSelection();
+        }
+
+        // NEU: Funktion zur Handhabung der Dropdown-Auswahl
+        function handlePopularItemSelection() {
+            const selectedIndex = popularItemSelect.value;
+            const selectedItem = POPULAR_ITEMS[selectedIndex];
+
+            if (selectedItem.isOther) {
+                otherItemInputsDiv.classList.remove('hidden'); // Felder anzeigen
+                orderDetailsInput.value = ''; // Felder leeren
+                itemPriceInput.value = '';
+            } else {
+                otherItemInputsDiv.classList.add('hidden'); // Felder verstecken
+                if (selectedItem.isPlaceholder) {
+                    orderDetailsInput.value = ''; // Auch leeren, wenn Placeholder gewählt
+                    itemPriceInput.value = '';
+                } else {
+                    orderDetailsInput.value = selectedItem.name; // Feld mit Name füllen
+                    itemPriceInput.value = selectedItem.price.toFixed(2); // Feld mit Preis füllen
+                }
+            }
+        }
+
 
         // Function to show modal
         function showModal(message, onConfirm) {
@@ -244,11 +307,29 @@
         // Add new order
         async function addOrder() {
             const name = customerNameInput.value.trim();
-            const details = orderDetailsInput.value.trim();
-            const itemPrice = parseFloat(itemPriceInput.value);
+            let details = orderDetailsInput.value.trim(); // Jetzt mit let, da es angepasst werden kann
+            let itemPrice = parseFloat(itemPriceInput.value); // Jetzt mit let, da es angepasst werden kann
 
-            if (!name || !details) {
-                showModal("Bitte gib sowohl deinen Namen als auch deine Bestellung ein.", () => {});
+            // NEU: Prüfen, ob ein vordefiniertes Produkt ausgewählt wurde, das kein "Sonstiges" ist
+            const selectedIndex = popularItemSelect.value;
+            const selectedItem = POPULAR_ITEMS[selectedIndex];
+
+            if (selectedItem && !selectedItem.isPlaceholder && !selectedItem.isOther) {
+                // Wenn ein spezifisches Produkt gewählt wurde, verwenden wir dessen Details und Preis
+                details = selectedItem.name;
+                itemPrice = selectedItem.price;
+            } else {
+                // Wenn "Sonstiges" oder der Platzhalter ausgewählt wurde,
+                // verwenden wir die manuell eingegebenen Werte.
+                // Hier müssen wir auch die Validierung anpassen, da die Felder anfangs versteckt sein könnten.
+                if (!details) {
+                    showModal("Bitte gib die genauen Details für deine 'Sonstiges' Bestellung ein.", () => {});
+                    return;
+                }
+            }
+
+            if (!name) {
+                showModal("Bitte gib deinen Namen ein.", () => {});
                 return;
             }
             if (isNaN(itemPrice) || itemPrice < 0) {
@@ -274,6 +355,8 @@
                 customerNameInput.value = '';
                 orderDetailsInput.value = '';
                 itemPriceInput.value = '';
+                popularItemSelect.value = 0; // Dropdown auf Placeholder zurücksetzen
+                handlePopularItemSelection(); // Zustand des Formulars anpassen
                 console.log("Order added successfully!");
             } catch (error) {
                 console.error("Error adding order: ", error);
@@ -369,8 +452,7 @@
             orderDiv.appendChild(statusEl);
             orderDiv.appendChild(timestampEl);
 
-            // NEU: Buttons nur anzeigen, wenn der aktuelle Benutzer ein Admin ist
-            // currentUserId muss in ADMIN_UIDS enthalten sein
+            // Buttons nur anzeigen, wenn der aktuelle Benutzer ein Admin ist
             if (ADMIN_UIDS.includes(currentUserId)) {
                 const togglePaidButton = document.createElement('button');
                 togglePaidButton.textContent = order.isPaid ? 'Als unbezahlt markieren' : 'Als bezahlt markieren';
@@ -434,6 +516,11 @@
 
         // --- Event Listeners ---
         submitOrderButton.addEventListener('click', addOrder);
+        // NEU: Event Listener für das Dropdown
+        popularItemSelect.addEventListener('change', handlePopularItemSelection);
+
+        // NEU: Initialisierung des Dropdowns beim Laden der Seite
+        document.addEventListener('DOMContentLoaded', populatePopularItemsDropdown);
     </script>
 </body>
 </html>
