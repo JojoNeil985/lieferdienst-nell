@@ -124,11 +124,23 @@
         <p class="text-sm text-indigo-100">&copy; <span id="currentYear"></span> Lieferdienst Nell - Ein Gag-Projekt von Johannes N.</p>
     </footer>
 
+    <!-- NEU: Hofer Notification Banner -->
+    <div id="hoferNotificationBanner" class="fixed top-0 left-0 w-full bg-blue-600 text-white text-center py-3 px-4 z-50 shadow-lg hidden flex flex-col md:flex-row items-center justify-center gap-2">
+        <p id="hoferNotificationMessage" class="text-lg font-semibold"></p>
+        <button id="dismissHoferNotification" class="bg-blue-800 hover:bg-blue-700 text-white text-sm font-bold py-1 px-3 rounded-md transition duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 mt-2 md:mt-0">
+            Verstanden
+        </button>
+        <!-- Admin-only button to end the trip -->
+        <button id="endHoferTripButton" class="bg-red-500 hover:bg-red-600 text-white text-sm font-bold py-1 px-3 rounded-md transition duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50 hidden mt-2 md:mt-0 ml-0 md:ml-4">
+            Hofer Trip beenden
+        </button>
+    </div>
+
     <script type="module">
         // Firebase Imports (nur einmal und direkt vom CDN)
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, serverTimestamp, query, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, serverTimestamp, query, orderBy, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // Your web app's Firebase configuration
@@ -158,7 +170,7 @@
         // MIT DEN TATSÄCHLICHEN USER IDs, die Admin-Rechte haben sollen.
         const ADMIN_UIDS = ['7LWBACpvaKdHOxDJDqMmd1kiT5y1', 'oXsY6EHMPmb20t07XGtN7cHLT3z2']; 
 
-        // NEU: Beliebte Produkte mit Preisen
+        // Beliebte Produkte mit Preisen
         const POPULAR_ITEMS = [
             { name: "Wähle ein Produkt...", price: 0, isPlaceholder: true },
             { name: "Coca Cola Normal", price: 1.35 },
@@ -167,6 +179,10 @@
             { name: "Mineralwasser Still", price: 0.90 },
             { name: "Sonstiges...", price: 0, isOther: true }
         ];
+
+        // NEU: Konstante für Hofer Trip Status (Firestore)
+        const HOFER_STATUS_DOC_PATH = `artifacts/${firebaseConfig.appId}/public/data/appStatus/lieferdienstStatus`;
+        let hoferStatusDocRef; // Firestore DocumentReference
 
         try {
             app = initializeApp(firebaseConfig);
@@ -177,6 +193,9 @@
 
             ordersCollection = collection(db, ordersCollectionPath);
             console.log("Orders collection reference created successfully.");
+
+            // Initialisiere Hofer Status DocumentReference
+            hoferStatusDocRef = doc(db, HOFER_STATUS_DOC_PATH);
 
         } catch (error) {
             console.error("Error initializing Firebase:", error);
@@ -197,9 +216,21 @@
         const noOrdersDiv = document.getElementById('noOrders');
         document.getElementById('currentYear').textContent = new Date().getFullYear();
 
-        // NEU: DOM-Elemente für das Dropdown und den "Sonstiges"-Bereich
+        // DOM-Elemente für das Dropdown und den "Sonstiges"-Bereich
         const popularItemSelect = document.getElementById('popularItem');
         const otherItemInputsDiv = document.getElementById('otherItemInputs');
+
+        // NEU: DOM-Elemente für Hofer Feature
+        const hoferTripButton = document.createElement('button'); // Dieser Button wird dynamisch hinzugefügt
+        hoferTripButton.id = 'hoferTripButton';
+        hoferTripButton.className = 'w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg shadow-md transition duration-150 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50 mt-4';
+        hoferTripButton.textContent = 'Ich gehe zum Hofer!';
+
+        const hoferNotificationBanner = document.getElementById('hoferNotificationBanner');
+        const hoferNotificationMessage = document.getElementById('hoferNotificationMessage');
+        const dismissHoferNotificationButton = document.getElementById('dismissHoferNotification');
+        const endHoferTripButton = document.getElementById('endHoferTripButton'); // Admin-only Button im Banner
+
 
         // Modal elements
         const confirmationModal = document.getElementById('confirmationModal');
@@ -215,6 +246,21 @@
                 userIdDisplay.textContent = currentUserId;
                 console.log("User is signed in with UID:", currentUserId);
                 loadOrders();
+
+                // NEU: Hofer Button nur für Admins anzeigen
+                if (ADMIN_UIDS.includes(currentUserId)) {
+                    const orderFormSection = document.getElementById('order-form').querySelector('.space-y-4');
+                    // Verhindere, dass der Button mehrfach hinzugefügt wird
+                    if (orderFormSection && !document.getElementById('hoferTripButton')) {
+                        orderFormSection.appendChild(hoferTripButton);
+                    }
+                } else {
+                    // Stelle sicher, dass der Button für Nicht-Admins nicht vorhanden ist
+                    const existingHoferButton = document.getElementById('hoferTripButton');
+                    if (existingHoferButton) {
+                        existingHoferButton.remove();
+                    }
+                }
             } else {
                 console.log("User is signed out. Attempting to sign in anonymously...");
                 userIdDisplay.textContent = "Authentifizierung...";
@@ -231,7 +277,7 @@
 
         // --- Functions ---
 
-        // NEU: Funktion zum Befüllen des Dropdowns
+        // Funktion zum Befüllen des Dropdowns
         function populatePopularItemsDropdown() {
             popularItemSelect.innerHTML = ''; // Vorherige Optionen löschen
             POPULAR_ITEMS.forEach((item, index) => {
@@ -248,7 +294,7 @@
             handlePopularItemSelection();
         }
 
-        // NEU: Funktion zur Handhabung der Dropdown-Auswahl
+        // Funktion zur Handhabung der Dropdown-Auswahl
         function handlePopularItemSelection() {
             const selectedIndex = popularItemSelect.value;
             const selectedItem = POPULAR_ITEMS[selectedIndex];
@@ -307,10 +353,10 @@
         // Add new order
         async function addOrder() {
             const name = customerNameInput.value.trim();
-            let details = orderDetailsInput.value.trim(); // Jetzt mit let, da es angepasst werden kann
-            let itemPrice = parseFloat(itemPriceInput.value); // Jetzt mit let, da es angepasst werden kann
+            let details = orderDetailsInput.value.trim();
+            let itemPrice = parseFloat(itemPriceInput.value);
 
-            // NEU: Prüfen, ob ein vordefiniertes Produkt ausgewählt wurde, das kein "Sonstiges" ist
+            // Prüfen, ob ein vordefiniertes Produkt ausgewählt wurde, das kein "Sonstiges" ist
             const selectedIndex = popularItemSelect.value;
             const selectedItem = POPULAR_ITEMS[selectedIndex];
 
@@ -321,7 +367,6 @@
             } else {
                 // Wenn "Sonstiges" oder der Platzhalter ausgewählt wurde,
                 // verwenden wir die manuell eingegebenen Werte.
-                // Hier müssen wir auch die Validierung anpassen, da die Felder anfangs versteckt sein könnten.
                 if (!details) {
                     showModal("Bitte gib die genauen Details für deine 'Sonstiges' Bestellung ein.", () => {});
                     return;
@@ -514,13 +559,123 @@
             }
         }
 
+        // NEU: Funktion zum Anzeigen der Hofer-Benachrichtigung
+        function showHoferNotification(message, isInitiator = false) {
+            // Nur anzeigen, wenn nicht lokal vom Benutzer (der nicht der Initiator ist) ausgeblendet
+            if (localStorage.getItem('dismissedHoferTrip') === 'true' && !isInitiator) {
+                return;
+            }
+            hoferNotificationMessage.textContent = message;
+            hoferNotificationBanner.classList.remove('hidden');
+            // "Hofer Trip beenden"-Button nur für den Admin anzeigen, der den Trip gestartet hat
+            if (ADMIN_UIDS.includes(currentUserId) && isInitiator) {
+                endHoferTripButton.classList.remove('hidden');
+            } else {
+                endHoferTripButton.classList.add('hidden');
+            }
+        }
+
+        // NEU: Funktion zum Verstecken der Hofer-Benachrichtigung
+        function hideHoferNotification() {
+            hoferNotificationBanner.classList.add('hidden');
+            endHoferTripButton.classList.add('hidden'); // Admin-Button immer verstecken, wenn Banner ausgeblendet wird
+        }
+
         // --- Event Listeners ---
         submitOrderButton.addEventListener('click', addOrder);
-        // NEU: Event Listener für das Dropdown
+        // Event Listener für das Dropdown
         popularItemSelect.addEventListener('change', handlePopularItemSelection);
 
-        // NEU: Initialisierung des Dropdowns beim Laden der Seite
+        // Initialisierung des Dropdowns beim Laden der Seite
         document.addEventListener('DOMContentLoaded', populatePopularItemsDropdown);
+
+        // NEU: Event Listener für den "Ich gehe zum Hofer!"-Button
+        hoferTripButton.addEventListener('click', async () => {
+            showModal("Möchtest du wirklich eine Benachrichtigung an alle senden, dass du zum Hofer gehst?", async () => {
+                try {
+                    await setDoc(hoferStatusDocRef, { // setDoc überschreibt das Dokument, addDoc erstellt ein neues
+                        hoferTripActive: true,
+                        hoferTripTimestamp: serverTimestamp(),
+                        hoferTripInitiator: currentUserId,
+                        hoferMessage: "Johannes geht zum Hofer, bestelle deine Bestellung in den nächsten Minuten!"
+                    });
+                    console.log("Hofer trip status activated.");
+                    // Benachrichtigung ausblenden, sie wird wieder angezeigt, wenn HOFER_STATUS_DOC_PATH aktiv wird
+                    hideHoferNotification(); 
+                    localStorage.removeItem('dismissedHoferTrip'); // Stelle sicher, dass die Benachrichtigung bei Neustart des Trips wieder erscheint
+                } catch (error) {
+                    console.error("Error activating Hofer trip status:", error);
+                    showModal(`Fehler beim Aktivieren des Hofer-Status: ${error.message}`, () => {});
+                }
+            });
+        });
+
+        // NEU: Event Listener für den "Verstanden"-Button im Hofer-Banner
+        dismissHoferNotificationButton.addEventListener('click', () => {
+            hideHoferNotification();
+            // Lokale Markierung setzen, damit die Benachrichtigung nicht sofort wieder erscheint
+            localStorage.setItem('dismissedHoferTrip', 'true');
+        });
+
+        // NEU: Event Listener für den "Hofer Trip beenden"-Button (Admin-only)
+        endHoferTripButton.addEventListener('click', async () => {
+            showModal("Möchtest du den Hofer Trip beenden?", async () => {
+                try {
+                    await updateDoc(hoferStatusDocRef, {
+                        hoferTripActive: false,
+                        hoferTripTimestamp: serverTimestamp(), // Aktualisiere den Timestamp, um die Endzeit zu reflektieren
+                        hoferMessage: null // Nachricht löschen
+                    });
+                    console.log("Hofer trip status deactivated.");
+                    hideHoferNotification();
+                    localStorage.removeItem('dismissedHoferTrip'); // Ausblend-Flag löschen, damit es beim nächsten Trip wieder erscheint
+                } catch (error) {
+                    console.error("Error deactivating Hofer trip status:", error);
+                    showModal(`Fehler beim Deaktivieren des Hofer-Status: ${error.message}`, () => {});
+                }
+            });
+        });
+
+        // NEU: Listener für Hofer Status Änderungen in Firestore
+        onSnapshot(hoferStatusDocRef, (docSnapshot) => {
+            if (docSnapshot.exists()) {
+                const data = docSnapshot.data();
+                const hoferTripActive = data.hoferTripActive;
+                const hoferTripTimestamp = data.hoferTripTimestamp ? data.hoferTripTimestamp.toDate() : null;
+                const hoferTripInitiator = data.hoferTripInitiator;
+                const hoferMessage = data.hoferMessage;
+
+                if (hoferTripActive && hoferTripTimestamp) {
+                    const now = new Date();
+                    const fifteenMinutesAgo = new Date(now.getTime() - (15 * 60 * 1000)); // 15 Minuten in Millisekunden
+
+                    // Benachrichtigung anzeigen, wenn aktiv UND vor weniger als 15 Minuten aktiviert
+                    // ODER wenn es der Admin ist, der den Trip gestartet hat und er noch aktiv ist.
+                    if (hoferTripTimestamp > fifteenMinutesAgo || (currentUserId === hoferTripInitiator && hoferTripActive)) {
+                        // Überprüfe, ob der Benutzer die Benachrichtigung lokal ausgeblendet hat (außer es ist der Initiator)
+                        if (localStorage.getItem('dismissedHoferTrip') === 'true' && currentUserId !== hoferTripInitiator) {
+                            hideHoferNotification(); // Ausgeblendet lassen, wenn markiert
+                            return;
+                        }
+                        showHoferNotification(hoferMessage, currentUserId === hoferTripInitiator);
+                    } else {
+                        hideHoferNotification();
+                        localStorage.removeItem('dismissedHoferTrip'); // Ausblendung löschen, wenn Trip zu alt
+                    }
+                } else {
+                    hideHoferNotification();
+                    localStorage.removeItem('dismissedHoferTrip'); // Ausblendung löschen, wenn Trip deaktiviert
+                }
+            } else {
+                // Dokument existiert nicht, also kein aktiver Hofer-Trip
+                hideHoferNotification();
+                localStorage.removeItem('dismissedHoferTrip');
+            }
+        }, (error) => {
+            console.error("Error listening to Hofer status:", error);
+            // Fehleranzeige im Banner könnte hier auch sinnvoll sein
+            // showHoferNotification(`Fehler beim Laden des Hofer-Status: ${error.message}`);
+        });
     </script>
 </body>
 </html>
