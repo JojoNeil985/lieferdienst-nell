@@ -46,20 +46,8 @@
             padding: 10px 20px;
             border-radius: 0.375rem;
         }
-        /* Styles für den Notification Prompt */
-        #notificationPrompt {
-            background-color: #fff;
-            border-radius: 0.5rem;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            padding: 1.5rem;
-            text-align: center;
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            z-index: 1001; /* Noch höher als Modal */
-            display: none;
-        }
+        /* Styles für den Notification Prompt (jetzt gelöscht, aber für den Fall der Fälle) */
+        /* #notificationPrompt { ... } */
 
         /* Tabs für Admin-Ansicht */
         .tab-button {
@@ -92,7 +80,7 @@
             <h1 class="text-4xl md:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600">Lieferdienst Nell</h1>
             <p class="text-xl text-gray-600 mt-2">Sehr schnell, sehr zuverlässig!</p>
             <p class="text-sm text-gray-500 mt-1">Deine Pausen-Versorgung direkt ins Klassenzimmer.</p>
-            <p class="text-md font-semibold text-emerald-600 mt-3"> Sonderangebot : Liefergebühr: Nur 0,10 €! Nur für Kurze Zeit!</p>
+            <p class="text-md font-semibold text-emerald-600 mt-3">Liefergebühr: Nur 0,10 €!</p>
         </header>
 
         <div id="auth-status" class="text-center mb-4">
@@ -111,13 +99,22 @@
             </div>
         </div>
 
-        <!-- Bestellungsformular (standardmäßig sichtbar, aber in Tab integrierbar) -->
+        <!-- Bestellungsformular (standardmäßig sichtbar, für Nicht-Admins immer da, für Admins im Tab) -->
         <section id="order-form-section" class="mb-8">
             <h2 class="text-2xl font-semibold mb-4 text-gray-700">Neue Bestellung aufgeben:</h2>
+            <!-- NEU: Nächste Lieferzeit Hinweis -->
+            <div class="bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-3 mb-4 rounded-md">
+                <p class="font-medium">Nächste Lieferung: ca. 12:30 Uhr (Bestellen bis 12:20 Uhr!)</p>
+            </div>
             <div class="space-y-4">
                 <div>
                     <label for="customerName" class="block text-sm font-medium text-gray-700">Dein Name:</label>
                     <input type="text" id="customerName" name="customerName" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="Max Mustermann">
+                </div>
+                <!-- NEU: Klassenzimmer Input -->
+                <div>
+                    <label for="classroom" class="block text-sm font-medium text-gray-700">Klassenzimmer/Raum (optional):</label>
+                    <input type="text" id="classroom" name="classroom" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="z.B. 8b, Lehrerzimmer">
                 </div>
 
                 <!-- Schnell-Nachbestellung -->
@@ -137,7 +134,7 @@
                     </select>
                 </div>
 
-                <!-- NEU: Mengenfeld -->
+                <!-- Mengenfeld -->
                 <div id="quantityInputDiv">
                     <label for="itemQuantity" class="block text-sm font-medium text-gray-700">Menge:</label>
                     <input type="number" id="itemQuantity" name="itemQuantity" min="1" value="1" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
@@ -163,23 +160,10 @@
 
         <hr class="my-8 border-gray-300">
 
-        <!-- NEU: Abschnitt für Push-Benachrichtigungen -->
-        <section id="notification-settings" class="mb-8">
-            <h2 class="text-2xl font-semibold mb-4 text-gray-700">Benachrichtigungen</h2>
-            <p class="text-gray-600 mb-4">Erhalte Handy-Benachrichtigungen, wenn Johannes zum Hofer geht.</p>
-            <div class="flex flex-col sm:flex-row gap-4">
-                <button id="enableNotifications" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow-md transition duration-150 ease-in-out">
-                    Benachrichtigungen aktivieren
-                </button>
-                <button id="disableNotifications" class="flex-1 bg-gray-400 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg shadow-md transition duration-150 ease-in-out">
-                    Benachrichtigungen deaktivieren
-                </button>
-            </div>
-        </section>
+        <!-- Hofer Trip Admin Button (dynamisch hinzugefügt) -->
+        <!-- Keine separaten Notification-Settings mehr -->
 
-        <hr class="my-8 border-gray-300">
-
-        <!-- NEU: Filter- und Sortieroptionen für Bestellungen -->
+        <!-- Filter- und Sortieroptionen für Bestellungen -->
         <section id="orders-filter-sort" class="mb-6">
             <h2 class="text-2xl font-semibold mb-4 text-gray-700">Filter & Sortierung</h2>
             <div class="flex flex-col sm:flex-row gap-4">
@@ -234,7 +218,7 @@
         <p class="text-sm text-indigo-100">&copy; <span id="currentYear"></span> Lieferdienst Nell - Ein Gag-Projekt von Johannes N.</p>
     </footer>
 
-    <!-- Hofer Notification Banner -->
+    <!-- Hofer Notification Banner (Webseiten-Pop-up) -->
     <div id="hoferNotificationBanner" class="fixed top-0 left-0 w-full bg-blue-600 text-white text-center py-3 px-4 z-50 shadow-lg hidden flex flex-col md:flex-row items-center justify-center gap-2">
         <p id="hoferNotificationMessage" class="text-lg font-semibold"></p>
         <button id="dismissHoferNotification" class="bg-blue-800 hover:bg-blue-700 text-white text-sm font-bold py-1 px-3 rounded-md transition duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 mt-2 md:mt-0">
@@ -246,12 +230,8 @@
         </button>
     </div>
 
-    <!-- Benutzerdefinierter Benachrichtigungs-Erlaubnis-Dialog -->
-    <div id="notificationPrompt" class="hidden">
-        <p class="mb-4 text-gray-700">Möchtest du "Lieferdienst Nell" erlauben, dir Benachrichtigungen zu senden, wenn Johannes zum Hofer geht?</p>
-        <button id="allowNotificationsBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg shadow-md mr-2">Erlauben</button>
-        <button id="denyNotificationsBtn" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg shadow-md">Ablehnen</button>
-    </div>
+    <!-- Benutzerdefinierter Benachrichtigungs-Erlaubnis-Dialog (ENTFERNT) -->
+    <!-- <div id="notificationPrompt" class="hidden"> ... </div> -->
 
 
     <script type="module">
@@ -259,8 +239,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, serverTimestamp, query, orderBy, where, getDocs, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        // Import für Firebase Messaging (für Push Notifications - falls später aktiviert)
-        import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-messaging.js";
+        // KEIN Import für Firebase Messaging mehr (für Handy-Push Notifications)
         import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 
@@ -271,7 +250,7 @@
             projectId: "lieferdienst-nell",
             storageBucket: "lieferdienst-nell.firebasestorage.app",
             messagingSenderId: "1040028718739",
-            appId: "1:1040028718739:web:1d70d11875d75cc195df66",
+            appId: "1:1040028718739:web:1d70d11875d75cc195df66", // BITTE HIER DEINE ECHTE APP_ID ERSETZEN
             measurementId: "G-Y06HR8YKHC"
         };
 
@@ -279,22 +258,22 @@
         let app;
         let db;
         let auth;
-        let messaging; 
+        // let messaging; // NICHT MEHR BENÖTIGT
         let ordersCollection;
-        let productsCollection; // NEU: Produkte Collection
-        let userProfilesCollection; // NEU: User Profile Collection
+        let productsCollection;
+        let userProfilesCollection;
         let ordersCollectionPath = `artifacts/${firebaseConfig.appId}/public/data/lieferdienstNellOrders`;
-        let productsCollectionPath = `artifacts/${firebaseConfig.appId}/public/data/products`; // NEU: Produkte Pfad
-        let userProfilesCollectionPath = `artifacts/${firebaseConfig.appId}/users`; // NEU: User Profile Pfad
+        let productsCollectionPath = `artifacts/${firebaseConfig.appId}/public/data/products`;
+        let userProfilesCollectionPath = `artifacts/${firebaseConfig.appId}/users`;
         let currentUserId = null;
 
         // Konstante für die Liefergebühr
         const DELIVERY_FEE = 0.10; // 10 Cent
 
         // Array von User IDs für Admin-Funktionen
-        // BITTE ERSETZE '7LW8aCpvaKdHOxDJDqMmd1kiT5y1' UND 'DEINE_JOHANNES_UID_2_HIER'
+        // BITTE ERSETZE 'DEINE_JOHANNES_UID_1_HIER' UND 'DEINE_JOHANNES_UID_2_HIER'
         // MIT DEN TATSÄCHLICHEN USER IDs, die Admin-Rechte haben sollen.
-        const ADMIN_UIDS = ['7LW8aCpvaKdHOxDJDqMmd1kiT5y1', 'oXsY6EHMPmb20t07XGtN7cHLT3z2']; 
+        const ADMIN_UIDS = ['oXsY6EHMPmb20t07XGtN7cHLT3z2', '7LW8aCpvaKdHOxDJDqMmd1kiT5y1']; 
 
         // Initial leere Produktliste, wird aus Firestore geladen
         let POPULAR_ITEMS = [{ name: "Wähle ein Produkt...", price: 0, isPlaceholder: true }];
@@ -303,14 +282,12 @@
         const HOFER_STATUS_DOC_PATH = `artifacts/${firebaseConfig.appId}/public/data/appStatus/lieferdienstStatus`;
         let hoferStatusDocRef; // Firestore DocumentReference
 
-        // Firestore Collection für Geräte-Tokens (für Push Notifications)
-        const DEVICE_TOKENS_COLLECTION_PATH = `artifacts/${firebaseConfig.appId}/public/data/deviceTokens`;
-        let deviceTokensCollection;
+        // KEINE Firestore Collection für Geräte-Tokens mehr
+        // const DEVICE_TOKENS_COLLECTION_PATH = `artifacts/${firebaseConfig.appId}/public/data/deviceTokens`;
+        // let deviceTokensCollection;
 
-        // VAPID Public Key - Muss in der Firebase Console generiert werden (Project settings > Cloud Messaging)
-        // BITTE HIER DEINEN VAPID PUBLIC KEY EINFÜGEN!
-        // Beispiel: 'BGE1W_...'
-        const VAPID_PUBLIC_KEY = 'DEIN_VAPID_PUBLIC_KEY_HIER_EINFUEGEN'; 
+        // KEIN VAPID Public Key mehr
+        // const VAPID_PUBLIC_KEY = 'DEIN_VAPID_PUBLIC_KEY_HIER_EINFUEGEN'; 
 
         // Aktuelle Filter- und Sortier-Einstellungen
         let currentStatusFilter = 'all';
@@ -321,18 +298,18 @@
             app = initializeApp(firebaseConfig);
             db = getFirestore(app);
             auth = getAuth(app);
-            messaging = getMessaging(app); 
+            // messaging = getMessaging(app); // NICHT MEHR BENÖTIGT
             setLogLevel('debug');
             console.log("Firebase App initialized successfully.");
 
             ordersCollection = collection(db, ordersCollectionPath);
-            productsCollection = collection(db, productsCollectionPath); // NEU
-            userProfilesCollection = collection(db, userProfilesCollectionPath); // NEU
+            productsCollection = collection(db, productsCollectionPath);
+            userProfilesCollection = collection(db, userProfilesCollectionPath);
             console.log("Collections initialized successfully.");
 
             hoferStatusDocRef = doc(db, HOFER_STATUS_DOC_PATH);
 
-            deviceTokensCollection = collection(db, DEVICE_TOKENS_COLLECTION_PATH); 
+            // deviceTokensCollection = collection(db, DEVICE_TOKENS_COLLECTION_PATH); // NICHT MEHR BENÖTIGT
 
         } catch (error) {
             console.error("Error initializing Firebase:", error);
@@ -344,9 +321,10 @@
 
         // --- DOM Elements ---
         const customerNameInput = document.getElementById('customerName');
+        const classroomInput = document.getElementById('classroom'); // NEU
         const orderDetailsInput = document.getElementById('orderDetails');
         const itemPriceInput = document.getElementById('itemPrice');
-        const itemQuantityInput = document.getElementById('itemQuantity'); // NEU: Mengen-Input
+        const itemQuantityInput = document.getElementById('itemQuantity');
         const submitOrderButton = document.getElementById('submitOrder');
         const ordersContainer = document.getElementById('ordersContainer');
         const userIdDisplay = document.getElementById('userIdDisplay');
@@ -356,7 +334,7 @@
 
         const popularItemSelect = document.getElementById('popularItem');
         const otherItemInputsDiv = document.getElementById('otherItemInputs');
-        const quantityInputDiv = document.getElementById('quantityInputDiv'); // NEU: Quantity Input Div
+        const quantityInputDiv = document.getElementById('quantityInputDiv');
 
         const hoferTripButton = document.createElement('button');
         hoferTripButton.id = 'hoferTripButton';
@@ -368,25 +346,29 @@
         const dismissHoferNotificationButton = document.getElementById('dismissHoferNotification');
         const endHoferTripButton = document.getElementById('endHoferTripButton');
 
-        const enableNotificationsBtn = document.getElementById('enableNotifications');
-        const disableNotificationsBtn = document.getElementById('disableNotifications');
-        const notificationPrompt = document.getElementById('notificationPrompt');
-        const allowNotificationsBtn = document.getElementById('allowNotificationsBtn');
-        const denyNotificationsBtn = document.getElementById('denyNotificationsBtn');
+        // Alte Notification Buttons und Prompt entfernt
+        // const enableNotificationsBtn = document.getElementById('enableNotifications');
+        // const disableNotificationsBtn = document.getElementById('disableNotifications');
+        // const notificationPrompt = document.getElementById('notificationPrompt');
+        // const allowNotificationsBtn = document.getElementById('allowNotificationsBtn');
+        // const denyNotificationsBtn = document.getElementById('denyNotificationsBtn');
 
-        // NEU: Elemente für Filter und Sortierung
+        // Elemente für Filter und Sortierung
         const statusFilterSelect = document.getElementById('statusFilter');
         const sortOrderSelect = document.getElementById('sortOrder');
 
-        // NEU: Elemente für Admin Tabs
+        // Elemente für Admin Tabs
         const adminTabsDiv = document.getElementById('adminTabs');
         const ordersTabButton = document.getElementById('ordersTabButton');
         const productsTabButton = document.getElementById('productsTabButton');
         const dashboardTabButton = document.getElementById('dashboardTabButton');
         const tabContentDiv = document.getElementById('tabContent');
-        const orderFormSection = document.getElementById('order-form-section'); // Um das Bestellformular in den Tab zu verschieben
+        const orderFormSection = document.getElementById('order-form-section'); 
+        const ordersFilterSortSection = document.getElementById('orders-filter-sort');
+        const ordersListSection = document.getElementById('orders-list');
 
-        // NEU: Elemente für Schnell-Nachbestellung
+
+        // Elemente für Schnell-Nachbestellung
         const lastOrderSection = document.getElementById('lastOrderSection');
         const lastOrderDisplay = document.getElementById('lastOrderDisplay');
         const reorderLastOrderButton = document.getElementById('reorderLastOrder');
@@ -410,40 +392,42 @@
                 // Lade Produkte und Bestellungen, sobald User eingeloggt ist
                 await loadProducts(); 
                 loadOrders(); 
-                loadUserProfile(); // NEU: Lade Nutzerprofil (für letzte Bestellung)
+                loadUserProfile(); // Lade Nutzerprofil (für letzte Bestellung)
 
                 // Admin-spezifische UI-Anpassungen
                 if (ADMIN_UIDS.includes(currentUserId)) {
                     adminTabsDiv.classList.remove('hidden'); // Tabs anzeigen
-                    // Verschiebe das Bestellformular unter den Orders Tab.
-                    // Beim initialen Laden ist "Orders" der aktive Tab.
-                    ordersTabButton.click(); // Initial den Orders Tab aktivieren
+                    ordersTabButton.click(); // Initial den Orders Tab aktivieren (lädt Bestellungen)
                     
                     // Füge Hofer Button ein, falls noch nicht vorhanden
-                    const orderFormSpace = document.getElementById('order-form').querySelector('.space-y-4'); // Referenz zum ursprünglichen space-y-4
+                    const orderFormSpace = orderFormSection.querySelector('.space-y-4'); // Referenz zum inneren div
                     if (orderFormSpace && !document.getElementById('hoferTripButton')) {
                         orderFormSpace.appendChild(hoferTripButton);
                     }
                 } else {
                     adminTabsDiv.classList.add('hidden'); // Tabs für Nicht-Admins ausblenden
-                    orderFormSection.style.display = 'block'; // Bestellformular für Nicht-Admins immer anzeigen
-                    // Stelle sicher, dass der Hofer Button für Nicht-Admins nicht sichtbar ist
+                    // Stellen sicher, dass alle "Admin-Sections" außerhalb des Tab-Systems hidden sind
+                    orderFormSection.style.display = 'block';
+                    ordersFilterSortSection.style.display = 'block';
+                    ordersListSection.style.display = 'block';
+                    
+                    // Sicherstellen, dass der Hofer Button für Nicht-Admins nicht sichtbar ist
                     const existingHoferButton = document.getElementById('hoferTripButton');
                     if (existingHoferButton) {
                         existingHoferButton.remove();
                     }
                 }
 
-                // Service Worker nur einmal registrieren
-                if ('serviceWorker' in navigator) {
-                    try {
-                        const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
-                        console.log('Service Worker registered with scope:', registration.scope);
-                        updateNotificationButtons(); // Update Button status
-                    } catch (error) {
-                        console.error('Service Worker registration failed:', error);
-                    }
-                }
+                // Service Worker-Registrierung war für Push Notifications, jetzt nicht mehr nötig
+                // if ('serviceWorker' in navigator) {
+                //     try {
+                //         const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+                //         console.log('Service Worker registered with scope:', registration.scope);
+                //         updateNotificationButtons();
+                //     } catch (error) {
+                //         console.error('Service Worker registration failed:', error);
+                //     }
+                // }
 
             } else {
                 console.log("User is signed out. Attempting to sign in anonymously...");
@@ -466,10 +450,10 @@
             if (!currentUserId) return;
 
             const userProfileRef = doc(db, userProfilesCollection, currentUserId);
+            // Nutze onSnapshot für Echtzeit-Updates des Profils
             onSnapshot(userProfileRef, (docSnapshot) => {
                 if (docSnapshot.exists() && docSnapshot.data().lastOrderDetails) {
                     const lastOrder = docSnapshot.data().lastOrderDetails;
-                    // customerName ist nicht mehr Teil der lastOrderDetails, da es aus dem customerNameInput kommt
                     lastOrderDisplay.textContent = `${lastOrder.quantity}x ${lastOrder.orderDetails} (${((lastOrder.itemPrice || 0) * (lastOrder.quantity || 1)).toFixed(2).replace('.', ',')}€)`;
                     lastOrderSection.classList.remove('hidden');
                 } else {
@@ -503,18 +487,23 @@
         // NEU: Funktion zum Laden der Produkte aus Firestore
         async function loadProducts() {
             try {
-                const snapshot = await getDocs(query(productsCollection, orderBy('order', 'asc')));
-                POPULAR_ITEMS = [{ name: "Wähle ein Produkt...", price: 0, isPlaceholder: true }]; // Reset
-                snapshot.forEach(doc => {
-                    const product = doc.data();
-                    POPULAR_ITEMS.push(product);
+                // onSnapshot statt getDocs, um Produktliste live zu aktualisieren
+                onSnapshot(query(productsCollection, orderBy('order', 'asc')), (snapshot) => {
+                    POPULAR_ITEMS = [{ name: "Wähle ein Produkt...", price: 0, isPlaceholder: true }]; // Reset
+                    snapshot.forEach(doc => {
+                        const product = doc.data();
+                        POPULAR_ITEMS.push(product);
+                    });
+                    POPULAR_ITEMS.push({ name: "Sonstiges...", price: 0, isOther: true });
+                    populatePopularItemsDropdown(); // Dropdown mit geladenen Produkten füllen
+                    console.log("Products loaded from Firestore:", POPULAR_ITEMS);
+                }, (error) => {
+                    console.error("Error loading products (onSnapshot):", error);
+                    // showModal ist hier nicht ideal, da es bei jedem Fehler auftauchen würde
                 });
-                POPULAR_ITEMS.push({ name: "Sonstiges...", price: 0, isOther: true });
-                populatePopularItemsDropdown(); // Dropdown mit geladenen Produkten füllen
-                console.log("Products loaded from Firestore:", POPULAR_ITEMS);
             } catch (error) {
-                console.error("Error loading products:", error);
-                showModal("Fehler beim Laden der Produktliste. Versuche es später erneut.", () => {});
+                console.error("Initial error setting up product listener:", error);
+                showModal("Fehler beim Initialisieren der Produktliste. Versuche es später erneut.", () => {});
             }
         }
 
@@ -602,9 +591,10 @@
         // Add new order
         async function addOrder() {
             const name = customerNameInput.value.trim();
+            const classroom = classroomInput.value.trim(); // NEU: Klassenzimmer
             let details;
             let itemPrice;
-            const quantity = parseInt(itemQuantityInput.value) || 1; // Menge aus Input, Standard 1
+            const quantity = parseInt(itemQuantityInput.value) || 1;
 
             const selectedIndex = popularItemSelect.value;
             const selectedItem = POPULAR_ITEMS[selectedIndex];
@@ -618,7 +608,6 @@
                     itemPrice = selectedItem.price;
                 }
             } else {
-                // Wenn kein Produkt oder Placeholder ausgewählt, müssen manuelle Felder befüllt sein
                 details = orderDetailsInput.value.trim();
                 itemPrice = parseFloat(itemPriceInput.value);
             }
@@ -650,19 +639,22 @@
             try {
                 await addDoc(ordersCollection, {
                     customerName: name,
+                    classroom: classroom, // NEU: Klassenzimmer speichern
                     orderDetails: details,
                     itemPrice: itemPrice,
-                    quantity: quantity, // NEU: Menge speichern
-                    status: 'offen', // NEU: Standard-Status
+                    quantity: quantity,
+                    status: 'offen', // Standard-Status
                     createdAt: serverTimestamp(),
-                    orderedByUserId: currentUserId
+                    orderedByUserId: currentUserId,
+                    notes: '' // NEU: Leere Notizen beim Erstellen
                 });
                 customerNameInput.value = '';
+                classroomInput.value = ''; // NEU: Klassenzimmer zurücksetzen
                 orderDetailsInput.value = '';
                 itemPriceInput.value = '';
-                itemQuantityInput.value = 1; // Menge zurücksetzen
-                popularItemSelect.value = 0; // Dropdown auf Placeholder zurücksetzen
-                handlePopularItemSelection(); // Zustand des Formulars anpassen
+                itemQuantityInput.value = 1;
+                popularItemSelect.value = 0;
+                handlePopularItemSelection();
                 console.log("Order added successfully!");
 
                 // Letzte Bestellung im User-Profil speichern
@@ -684,12 +676,11 @@
                 return;
             }
             if (!ordersCollection) {
-                console.error("Orders collection is not initialized.");
+                console.error("Orders collection is not initialized. Cannot load orders.");
                 loadingOrdersDiv.textContent = "Fehler beim Laden der Bestellungen (DB nicht bereit).";
                 return;
             }
 
-            // NEU: Query mit Filtern und Sortierung
             let q = query(ordersCollection);
 
             if (currentStatusFilter !== 'all') {
@@ -698,14 +689,14 @@
 
             const [sortField, sortDirection] = currentSortOrder.split('_');
             if (sortField === 'totalPrice') {
-                 // Sortierung nach Gesamtpreis muss clientseitig erfolgen,
-                 // da Firestore keine Berechnungen im orderBy unterstützt.
-                 // Wir holen alle relevanten Daten und sortieren dann in JavaScript.
-                 // Für große Datenmengen wäre dies ineffizient. Für dieses Projekt ist es okay.
+                 // Sortierung nach Gesamtpreis muss clientseitig erfolgen
                  console.warn("Client-seitige Sortierung nach Gesamtpreis ist aktiv.");
-            } else {
-                 q = query(q, orderBy(sortField, sortDirection));
+            } else if (sortField === 'customerName') {
+                 q = query(q, orderBy('customerName', sortDirection)); // Sortiere nach customerName für A-Z/Z-A
+            } else if (sortField === 'createdAt') {
+                 q = query(q, orderBy('createdAt', sortDirection)); // Sortiere nach Erstellungszeit
             }
+
 
             onSnapshot(q, (snapshot) => {
                 loadingOrdersDiv.classList.add('hidden');
@@ -715,14 +706,24 @@
                     orders.push({ ...order, id: docSnapshot.id });
                 });
 
-                // Client-seitige Sortierung für Gesamtpreis
+                // Client-seitige Sortierung für Gesamtpreis und Klassenzimmer (falls nötig)
                 if (sortField === 'totalPrice') {
                     orders.sort((a, b) => {
                         const priceA = (a.itemPrice || 0) * (a.quantity || 1) + DELIVERY_FEE;
                         const priceB = (b.itemPrice || 0) * (b.quantity || 1) + DELIVERY_FEE;
                         return sortDirection === 'asc' ? priceA - priceB : priceB - priceA;
                     });
+                } else if (sortField === 'classroom') { // Beispiel für Client-seitige Sortierung nach Klassenzimmer
+                    orders.sort((a, b) => {
+                        const classroomA = a.classroom || '';
+                        const classroomB = b.classroom || '';
+                        return sortDirection === 'asc' ? classroomA.localeCompare(classroomB) : classroomB.localeCompare(classroomA);
+                    });
                 }
+                
+                // Gruppieren nach Klassenzimmer für die Anzeige (optional, hier einfach nur sortiert)
+                // orders.sort((a, b) => (a.classroom || '').localeCompare(b.classroom || ''));
+
 
                 if (orders.length === 0) {
                     noOrdersDiv.classList.remove('hidden');
@@ -734,7 +735,7 @@
                         displayOrder(order, order.id);
                     });
                 }
-                // NEU: Dashboard aktualisieren, wenn Bestellungen geladen sind
+                // Dashboard nur aktualisieren, wenn Dashboard-Tab aktiv ist
                 if (ADMIN_UIDS.includes(currentUserId) && dashboardTabButton.classList.contains('active')) {
                     updateAdminDashboard(orders);
                 }
@@ -748,20 +749,28 @@
         // Display a single order
         function displayOrder(order, orderId) {
             const orderDiv = document.createElement('div');
-            // Dynamische Klasse basierend auf Status
             orderDiv.className = `p-4 rounded-lg shadow-md border-l-4 status-${order.status || 'offen'}`;
+            orderDiv.setAttribute('data-order-id', orderId); // Speichere die ID am Element
 
             const nameEl = document.createElement('h3');
             nameEl.className = 'text-lg font-semibold text-gray-800';
             nameEl.textContent = order.customerName;
 
+            // NEU: Klassenzimmer anzeigen
+            if (order.classroom) {
+                const classroomEl = document.createElement('p');
+                classroomEl.className = 'text-sm text-gray-500 mt-0.5';
+                classroomEl.textContent = `Raum: ${order.classroom}`;
+                nameEl.appendChild(classroomEl); // Füge Klassenzimmer unter den Namen ein
+            }
+
             const detailsEl = document.createElement('p');
             detailsEl.className = 'text-gray-700 my-1';
-            detailsEl.textContent = `${order.quantity}x ${order.orderDetails}`; // NEU: Menge anzeigen
+            detailsEl.textContent = `${order.quantity}x ${order.orderDetails}`;
 
             const itemPriceEl = document.createElement('p');
             itemPriceEl.className = 'text-sm text-gray-600';
-            const formattedItemPrice = ((order.itemPrice || 0) * (order.quantity || 1)).toFixed(2).replace('.', ','); // Preis * Menge
+            const formattedItemPrice = ((order.itemPrice || 0) * (order.quantity || 1)).toFixed(2).replace('.', ',');
             itemPriceEl.textContent = `Artikelpreis: ${formattedItemPrice} €`;
 
             const totalPrice = ((order.itemPrice || 0) * (order.quantity || 1)) + DELIVERY_FEE;
@@ -774,9 +783,7 @@
             feeEl.className = 'text-sm text-emerald-700 font-medium';
             feeEl.textContent = `(+ ${DELIVERY_FEE.toFixed(2).replace('.', ',')} € Liefergebühr)`;
 
-
             const statusEl = document.createElement('p');
-            // Text und Farbe basierend auf Status
             let statusText = '';
             let statusColor = '';
             switch (order.status) {
@@ -805,18 +812,18 @@
             orderDiv.appendChild(statusEl);
             orderDiv.appendChild(timestampEl);
 
-            // Admin-Buttons für Statusänderung und Löschen
+            // Admin-spezifische Elemente und Buttons
             if (ADMIN_UIDS.includes(currentUserId)) {
-                const buttonContainer = document.createElement('div');
-                buttonContainer.className = 'mt-3 flex flex-wrap gap-2';
+                const adminControlsDiv = document.createElement('div');
+                adminControlsDiv.className = 'mt-3 space-y-2';
 
-                // Statusänderungs-Dropdown statt einzelnen Buttons
+                // Statusänderungs-Dropdown
                 const statusChangeSelect = document.createElement('select');
-                statusChangeSelect.className = 'py-2 px-3 text-xs font-medium rounded-md bg-indigo-200 text-indigo-800 transition-colors';
+                statusChangeSelect.className = 'py-2 px-3 text-xs font-medium rounded-md bg-indigo-200 text-indigo-800 transition-colors w-full';
                 ['offen', 'bezahlt', 'geliefert', 'storniert'].forEach(statusOption => {
                     const option = document.createElement('option');
                     option.value = statusOption;
-                    option.textContent = statusOption.charAt(0).toUpperCase() + statusOption.slice(1); // Großschreibung
+                    option.textContent = statusOption.charAt(0).toUpperCase() + statusOption.slice(1);
                     if (statusOption === order.status) {
                         option.selected = true;
                     }
@@ -829,26 +836,60 @@
                         () => updateOrderStatus(orderId, newStatus)
                     );
                 });
-                buttonContainer.appendChild(statusChangeSelect);
+                adminControlsDiv.appendChild(statusChangeSelect);
+
+                // NEU: Notizfeld für Admins
+                const notesDiv = document.createElement('div');
+                notesDiv.className = 'flex flex-col gap-1';
+                const notesLabel = document.createElement('label');
+                notesLabel.className = 'text-sm font-medium text-gray-700';
+                notesLabel.textContent = 'Admin Notiz:';
+                const notesInput = document.createElement('textarea');
+                notesInput.className = 'mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-xs';
+                notesInput.rows = 2;
+                notesInput.value = order.notes || '';
+                notesInput.placeholder = 'Hier Notizen hinzufügen (nur für Admins sichtbar)';
+                
+                const saveNotesButton = document.createElement('button');
+                saveNotesButton.textContent = 'Notiz speichern';
+                saveNotesButton.className = 'mt-1 py-1 px-2 text-xs font-medium rounded-md bg-indigo-500 hover:bg-indigo-600 text-white transition-colors self-start';
+                saveNotesButton.onclick = () => {
+                    showModal(`Notiz für ${order.customerName} speichern?`, async () => {
+                        try {
+                            await updateDoc(doc(ordersCollection, orderId), { notes: notesInput.value.trim() });
+                            console.log(`Notes updated for order ${orderId}`);
+                            showModal('Notiz erfolgreich gespeichert.', () => {});
+                        } catch (error) {
+                            console.error("Error updating notes:", error);
+                            showModal(`Fehler beim Speichern der Notiz: ${error.message}`, () => {});
+                        }
+                    });
+                };
+
+                notesDiv.appendChild(notesLabel);
+                notesDiv.appendChild(notesInput);
+                notesDiv.appendChild(saveNotesButton);
+                adminControlsDiv.appendChild(notesDiv);
 
 
+                // Löschen Button
                 const deleteButton = document.createElement('button');
-                deleteButton.textContent = 'Löschen';
-                deleteButton.className = 'py-2 px-3 text-xs font-medium rounded-md bg-red-500 hover:bg-red-600 text-white transition-colors';
+                deleteButton.textContent = 'Bestellung löschen';
+                deleteButton.className = 'mt-3 py-2 px-3 text-xs font-medium rounded-md bg-red-500 hover:bg-red-600 text-white transition-colors w-full';
                 deleteButton.onclick = () => {
                     showModal(
                         `Möchtest du die Bestellung von ${order.customerName} wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.`,
                         () => deleteOrder(orderId)
                     );
                 };
-                buttonContainer.appendChild(deleteButton);
-                orderDiv.appendChild(buttonContainer);
+                adminControlsDiv.appendChild(deleteButton);
+                orderDiv.appendChild(adminControlsDiv);
             }
 
             ordersContainer.appendChild(orderDiv);
         }
 
-        // NEU: Funktion zum Aktualisieren des Bestellstatus
+        // Funktion zum Aktualisieren des Bestellstatus
         async function updateOrderStatus(orderId, newStatus) {
             if (!ordersCollection) {
                 console.error("Orders collection is not initialized.");
@@ -858,7 +899,7 @@
             try {
                 await updateDoc(orderRef, {
                     status: newStatus,
-                    lastUpdated: serverTimestamp() // Auch für den Status-Update speichern
+                    lastUpdated: serverTimestamp()
                 });
                 console.log(`Order ${orderId} status updated to: ${newStatus}`);
             } catch (error) {
@@ -891,7 +932,7 @@
             }
             hoferNotificationMessage.textContent = message;
             hoferNotificationBanner.classList.remove('hidden');
-            if (ADMIN_UIDS.includes(currentUserId)) { // Überprüfe ob der aktuelle Benutzer Admin ist (nicht nur Initiator)
+            if (ADMIN_UIDS.includes(currentUserId)) {
                 endHoferTripButton.classList.remove('hidden');
             } else {
                 endHoferTripButton.classList.add('hidden');
@@ -904,133 +945,37 @@
             endHoferTripButton.classList.add('hidden');
         }
 
-        // --- Push Notification Logik ---
-        async function requestNotificationPermissionAndGetToken() {
-            if (!('Notification' in window) || !('serviceWorker' in navigator)) {
-                console.warn('Push-Benachrichtigungen werden von diesem Browser nicht unterstützt.');
-                showModal('Dein Browser unterstützt Push-Benachrichtigungen nicht.', () => {});
-                return;
-            }
+        // --- KEINE Push Notification Logik mehr hier ---
+        // Die Funktionen requestNotificationPermissionAndGetToken, saveDeviceTokenToFirestore,
+        // deleteDeviceTokenFromFirestore, updateNotificationButtons, onMessage wurden entfernt.
 
-            notificationPrompt.style.display = 'block';
 
-            return new Promise((resolve, reject) => {
-                allowNotificationsBtn.onclick = async () => {
-                    notificationPrompt.style.display = 'none';
-                    try {
-                        const permission = await Notification.requestPermission();
-                        if (permission === 'granted') {
-                            const currentToken = await getToken(messaging, { vapidKey: VAPID_PUBLIC_KEY });
-                            if (currentToken) {
-                                console.log('Geräte-Token:', currentToken);
-                                await saveDeviceTokenToFirestore(currentToken);
-                                updateNotificationButtons();
-                                resolve(currentToken);
-                            } else {
-                                console.log('Kein Geräte-Token verfügbar. Anfrage für Berechtigung fehlgeschlagen.');
-                                showModal('Benachrichtigungsberechtigung erteilt, aber kein Token erhalten. Stelle sicher, dass der Browser aktive Push-Services hat.', () => {});
-                                updateNotificationButtons();
-                                reject('No token available.');
-                            }
-                        } else {
-                            console.warn('Benachrichtigungsberechtigung verweigert.');
-                            showModal('Du hast die Benachrichtigungen blockiert. Du kannst sie in den Browser-Einstellungen ändern.', () => {});
-                            updateNotificationButtons();
-                            reject('Permission denied.');
-                        }
-                    } catch (error) {
-                        console.error('Fehler beim Anfordern der Benachrichtigungsberechtigung oder beim Abrufen des Tokens:', error);
-                        showModal(`Fehler bei Benachrichtigungen: ${error.message}`, () => {});
-                        updateNotificationButtons();
-                        reject(error);
-                    }
-                };
-
-                denyNotificationsBtn.onclick = () => {
-                    notificationPrompt.style.display = 'none';
-                    console.log('Benachrichtigungsberechtigung vom Benutzer abgelehnt.');
-                    showModal('Du hast die Benachrichtigungen abgelehnt.', () => {});
-                    updateNotificationButtons();
-                    reject('User denied permission via custom prompt.');
-                };
-            });
-        }
-
-        async function saveDeviceTokenToFirestore(token) {
-            if (!currentUserId) {
-                console.error("Cannot save token: currentUserId is not set.");
-                showModal("Fehler: Benutzer-ID nicht verfügbar. Token kann nicht gespeichert werden.", () => {});
-                return;
-            }
-            try {
-                await setDoc(doc(deviceTokensCollection, token), {
-                    token: token,
-                    userId: currentUserId,
-                    timestamp: serverTimestamp(),
-                });
-                console.log("Device token saved/updated in Firestore:", token);
-            } catch (error) {
-                console.error("Error saving device token to Firestore:", error);
-                showModal(`Fehler beim Speichern des Benachrichtigungs-Tokens: ${error.message}`, () => {});
-            }
-        }
-
-        async function deleteDeviceTokenFromFirestore(token) {
-            try {
-                await deleteDoc(doc(deviceTokensCollection, token));
-                console.log("Device token deleted from Firestore:", token);
-            } catch (error) {
-                console.error("Error deleting device token from Firestore:", error);
-                showModal(`Fehler beim Deaktivieren des Benachrichtigungs-Tokens: ${error.message}`, () => {});
-            }
-        }
-
-        function updateNotificationButtons() {
-            if (!('Notification' in window) || !('serviceWorker' in navigator)) {
-                enableNotificationsBtn.disabled = true;
-                disableNotificationsBtn.disabled = true;
-                enableNotificationsBtn.textContent = 'Nicht unterstützt';
-                disableNotificationsBtn.textContent = 'Nicht unterstützt';
-                return;
-            }
-
-            if (Notification.permission === 'granted') {
-                enableNotificationsBtn.disabled = true;
-                disableNotificationsBtn.disabled = false;
-                enableNotificationsBtn.textContent = 'Benachrichtigungen aktiviert';
-            } else if (Notification.permission === 'denied') {
-                enableNotificationsBtn.disabled = true;
-                disableNotificationsBtn.disabled = true;
-                enableNotificationsBtn.textContent = 'Benachrichtigungen blockiert';
-            } else {
-                enableNotificationsBtn.disabled = false;
-                disableNotificationsBtn.disabled = true;
-                enableNotificationsBtn.textContent = 'Benachrichtigungen aktivieren';
-            }
-        }
-
-        onMessage(messaging, (payload) => {
-            console.log('Nachricht im Vordergrund erhalten:', payload);
-            showModal(`Neue Benachrichtigung: ${payload.notification.body}`, () => {});
-        });
-
-        // NEU: --- Admin Dashboard Logik ---
+        // --- Admin Dashboard Logik ---
         async function updateAdminDashboard(orders) {
+            const openOrdersCount = orders.filter(o => o.status === 'offen').length;
+            const totalRevenue = calculateTotalRevenue(orders);
+            const topItemsHtml = renderTopItems(orders);
+            const aggregatedShoppingListHtml = renderAggregatedShoppingList(orders); // NEU
+
             const dashboardContent = `
                 <h3 class="text-xl font-semibold mb-4 text-gray-700">Übersicht</h3>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div class="bg-blue-100 p-4 rounded-lg shadow-sm">
                         <p class="text-sm text-blue-700">Offene Bestellungen:</p>
-                        <p class="text-2xl font-bold text-blue-800">${orders.filter(o => o.status === 'offen').length}</p>
+                        <p class="text-2xl font-bold text-blue-800">${openOrdersCount}</p>
                     </div>
                     <div class="bg-green-100 p-4 rounded-lg shadow-sm">
                         <p class="text-sm text-green-700">Gesamtumsatz (bezahlt):</p>
-                        <p class="text-2xl font-bold text-green-800">${calculateTotalRevenue(orders).toFixed(2).replace('.', ',')} €</p>
+                        <p class="text-2xl font-bold text-green-800">${totalRevenue.toFixed(2).replace('.', ',')} €</p>
                     </div>
                 </div>
                 <h3 class="text-xl font-semibold mt-6 mb-4 text-gray-700">Top Bestellungen (Aktuell)</h3>
                 <div id="topItemsList" class="space-y-2">
-                    ${renderTopItems(orders)}
+                    ${topItemsHtml}
+                </div>
+                <h3 class="text-xl font-semibold mt-6 mb-4 text-gray-700">Aggregierte Einkaufsliste (Offen)</h3>
+                <div id="shoppingList" class="space-y-2">
+                    ${aggregatedShoppingListHtml}
                 </div>
             `;
             tabContentDiv.innerHTML = dashboardContent;
@@ -1045,7 +990,7 @@
         function renderTopItems(orders) {
             const itemCounts = {};
             orders.forEach(order => {
-                const itemName = order.orderDetails; // Verwenden wir mal orderDetails als Item-Namen
+                const itemName = order.orderDetails; // Verwenden wir orderDetails als Item-Namen
                 const quantity = order.quantity || 1;
                 itemCounts[itemName] = (itemCounts[itemName] || 0) + quantity;
             });
@@ -1063,8 +1008,31 @@
                 </div>
             `).join('');
         }
+        
+        // NEU: Aggregierte Einkaufsliste
+        function renderAggregatedShoppingList(orders) {
+            const shoppingList = {};
+            orders.filter(o => o.status === 'offen').forEach(order => {
+                const itemName = order.orderDetails;
+                const quantity = order.quantity || 1;
+                shoppingList[itemName] = (shoppingList[itemName] || 0) + quantity;
+            });
 
-        // NEU: --- Produktverwaltung Logik (Admin) ---
+            const sortedShoppingList = Object.entries(shoppingList)
+                .sort(([, countA], [, countB]) => countB - countA);
+
+            if (sortedShoppingList.length === 0) return '<p class="text-gray-500">Keine offenen Artikel für den Einkauf.</p>';
+
+            return sortedShoppingList.map(([item, count]) => `
+                <div class="flex justify-between items-center bg-yellow-50 p-2 rounded-md">
+                    <span class="text-gray-700">${item}</span>
+                    <span class="font-semibold text-yellow-800">${count}x</span>
+                </div>
+            `).join('');
+        }
+
+
+        // --- Produktverwaltung Logik (Admin) ---
         async function renderProductManagement() {
             let productsHtml = `
                 <h3 class="text-xl font-semibold mb-4 text-gray-700">Produkte verwalten</h3>
@@ -1100,7 +1068,7 @@
             const currentProductsList = document.getElementById('currentProductsList');
             let editingProductId = null; // Für den Bearbeitungsmodus
 
-            // Produkte live anzeigen und verwalten
+            // Produkte live anzeigen und verwalten (Admin-Ansicht)
             onSnapshot(query(productsCollection, orderBy('order', 'asc')), (snapshot) => {
                 currentProductsList.innerHTML = '';
                 if (snapshot.empty) {
@@ -1144,7 +1112,7 @@
                                 try {
                                     await deleteDoc(doc(productsCollection, productId));
                                     showModal('Produkt erfolgreich gelöscht.', () => {});
-                                    await loadProducts(); // Produkte neu laden (für Dropdown)
+                                    // loadProducts() wird durch onSnapshot getriggert, aktualisiert auch das Dropdown
                                 } catch (error) {
                                     console.error("Error deleting product:", error);
                                     showModal(`Fehler beim Löschen des Produkts: ${error.message}`, () => {});
@@ -1185,7 +1153,7 @@
                     editingProductId = null;
                     saveProductButton.textContent = 'Produkt speichern';
                     cancelProductEditButton.classList.add('hidden');
-                    await loadProducts(); // Produktliste für das Dropdown neu laden
+                    // loadProducts() wird durch onSnapshot getriggert, aktualisiert auch das Dropdown
                 } catch (error) {
                     console.error("Error saving product:", error);
                     showModal(`Fehler beim Speichern des Produkts: ${error.message}`, () => {});
@@ -1209,7 +1177,7 @@
         popularItemSelect.addEventListener('change', handlePopularItemSelection);
         // document.addEventListener('DOMContentLoaded', populatePopularItemsDropdown); // Wird jetzt in onAuthStateChanged nach loadProducts aufgerufen
 
-        // NEU: Event Listener für Schnell-Nachbestellung
+        // Event Listener für Schnell-Nachbestellung
         reorderLastOrderButton.addEventListener('click', async () => {
             if (!currentUserId) return;
             const userProfileRef = doc(db, userProfilesCollection, currentUserId);
@@ -1217,7 +1185,8 @@
                 const docSnap = await getDoc(userProfileRef);
                 if (docSnap.exists() && docSnap.data().lastOrderDetails) {
                     const lastOrder = docSnap.data().lastOrderDetails;
-                    customerNameInput.value = (await getDoc(doc(db, userProfilesCollection, currentUserId))).data().customerName || ''; // Versuche, den Namen zu laden, falls im Profil gespeichert
+                    customerNameInput.value = (await getDoc(doc(db, userProfilesCollection, currentUserId))).data().customerName || ''; // Name evtl. speichern
+                    classroomInput.value = lastOrder.classroom || ''; // NEU: Klassenzimmer laden
                     orderDetailsInput.value = lastOrder.orderDetails;
                     itemPriceInput.value = lastOrder.itemPrice.toFixed(2);
                     itemQuantityInput.value = lastOrder.quantity;
@@ -1324,29 +1293,10 @@
             console.error("Error listening to Hofer status:", error);
         });
 
-        // Event Listener für Benachrichtigungs-Buttons
-        enableNotificationsBtn.addEventListener('click', requestNotificationPermissionAndGetToken);
-        disableNotificationsBtn.addEventListener('click', async () => {
-            try {
-                const registrations = await navigator.serviceWorker.getRegistrations();
-                for (const registration of registrations) {
-                    const subscription = await registration.pushManager.getSubscription();
-                    if (subscription) {
-                        const token = subscription.endpoint.split('/').pop();
-                        await deleteDeviceTokenFromFirestore(token);
-                        await subscription.unsubscribe();
-                        console.log("Unsubscribed from push notifications.");
-                    }
-                }
-                showModal('Benachrichtigungen erfolgreich deaktiviert.', () => {});
-                updateNotificationButtons();
-            } catch (error) {
-                console.error("Error disabling notifications:", error);
-                showModal(`Fehler beim Deaktivieren der Benachrichtigungen: ${error.message}`, () => {});
-            }
-        });
+        // KEINE Event Listener für Benachrichtigungs-Buttons mehr
 
-        // NEU: Event Listener für Filter- und Sortier-Dropdowns
+
+        // Event Listener für Filter- und Sortier-Dropdowns
         statusFilterSelect.addEventListener('change', (e) => {
             currentStatusFilter = e.target.value;
             loadOrders(); // Bestellungen neu laden mit neuem Filter
@@ -1357,20 +1307,22 @@
             loadOrders(); // Bestellungen neu laden mit neuer Sortierung
         });
 
-        // NEU: Admin Tab Navigation
+        // Admin Tab Navigation
         ordersTabButton.addEventListener('click', () => {
             ordersTabButton.classList.add('active');
             productsTabButton.classList.remove('active');
             dashboardTabButton.classList.remove('active');
             
-            // Bestehende Sektionen neu anordnen/anzeigen
-            tabContentDiv.innerHTML = ''; // Vorherigen Tab-Inhalt löschen
+            // Inhalt leeren und benötigte Sektionen anhängen
+            tabContentDiv.innerHTML = '';
             tabContentDiv.appendChild(orderFormSection);
-            tabContentDiv.appendChild(document.getElementById('orders-filter-sort'));
-            tabContentDiv.appendChild(document.getElementById('orders-list'));
+            tabContentDiv.appendChild(ordersFilterSortSection);
+            tabContentDiv.appendChild(ordersListSection);
+
+            // Sektionen sichtbar machen
             orderFormSection.style.display = 'block';
-            document.getElementById('orders-filter-sort').style.display = 'block';
-            document.getElementById('orders-list').style.display = 'block';
+            ordersFilterSortSection.style.display = 'block';
+            ordersListSection.style.display = 'block';
             
             loadOrders(); // Bestellungen aktualisieren
         });
@@ -1382,8 +1334,8 @@
             
             // Bestehende Sektionen ausblenden
             orderFormSection.style.display = 'none';
-            document.getElementById('orders-filter-sort').style.display = 'none';
-            document.getElementById('orders-list').style.display = 'none';
+            ordersFilterSortSection.style.display = 'none';
+            ordersListSection.style.display = 'none';
             
             renderProductManagement(); // Produktverwaltung rendern
         });
@@ -1395,8 +1347,8 @@
             
             // Bestehende Sektionen ausblenden
             orderFormSection.style.display = 'none';
-            document.getElementById('orders-filter-sort').style.display = 'none';
-            document.getElementById('orders-list').style.display = 'none';
+            ordersFilterSortSection.style.display = 'none';
+            ordersListSection.style.display = 'none';
             
             // Dashboard-Inhalt wird in loadOrders() aktualisiert, die dann getriggert wird
             loadOrders(); 
