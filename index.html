@@ -70,6 +70,9 @@
         }
 
         /* NEU: Trinkgeld Modal */
+        #tipModal { /* Wichtig: Kein display: flex hier, das wird per JS gesteuert */
+            display: none; /* Standardmäßig versteckt */
+        }
         #tipModal .tip-option-btn {
             background-color: #e0e7ff; /* indigo-100 */
             color: #4f46e5; /* indigo-600 */
@@ -268,7 +271,6 @@
         // Firebase Imports
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        // getDoc, updateDoc, deleteDoc hinzugefügt für Financial Summary Transaktionen
         import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, serverTimestamp, query, orderBy, where, getDocs, setDoc, runTransaction } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
@@ -291,11 +293,11 @@
         let ordersCollection;
         let productsCollection;
         let userProfilesCollection;
-        let financialSummaryCollection; // NEU: Financial Summary Collection
+        let financialSummaryCollection; // Financial Summary Collection
         let ordersCollectionPath = `artifacts/${firebaseConfig.appId}/public/data/lieferdienstNellOrders`;
         let productsCollectionPath = `artifacts/${firebaseConfig.appId}/public/data/products`;
         let userProfilesCollectionPath = `artifacts/${firebaseConfig.appId}/users`;
-        let financialSummaryDocPath = `artifacts/${firebaseConfig.appId}/public/data/financialSummary/overall`; // NEU: Pfad zum Finanz-Summary-Dokument
+        let financialSummaryDocPath = `artifacts/${firebaseConfig.appId}/public/data/financialSummary/overall`; // Pfad zum Finanz-Summary-Dokument
         let hoferStatusDocRef; // Firestore DocumentReference
 
         let currentUserId = null;
@@ -304,8 +306,7 @@
         const DELIVERY_FEE = 0.10; // 10 Cent
 
         // Array von User IDs für Admin-Funktionen
-        // BITTE ERSETZE 'DEINE_JOHANNES_UID_1_HIER' UND 'DEINE_JOHANNES_UID_2_HIER'
-        // MIT DEN TATSÄCHLICHEN USER IDs, die Admin-Rechte haben sollen.
+        // HIER SIND DEINE ADMIN UIDS EINGETRAGEN
         const ADMIN_UIDS = ['oXsY6EHMPmb20t07XGtN7cHLT3z2', '7LW8aCpvaKdHOxDJDqMmd1kiT5y1']; 
 
         // Initial leere Produktliste, wird aus Firestore geladen
@@ -326,7 +327,7 @@
             ordersCollection = collection(db, ordersCollectionPath);
             productsCollection = collection(db, productsCollectionPath);
             userProfilesCollection = collection(db, userProfilesCollectionPath);
-            financialSummaryCollection = collection(db, `artifacts/${firebaseConfig.appId}/public/data/financialSummary`); // NEU
+            financialSummaryCollection = collection(db, `artifacts/${firebaseConfig.appId}/public/data/financialSummary`);
             hoferStatusDocRef = doc(db, HOFER_STATUS_DOC_PATH);
 
             // Initialisiere das Financial Summary Dokument, falls es nicht existiert
@@ -346,7 +347,7 @@
         const orderDetailsInput = document.getElementById('orderDetails');
         const itemPriceInput = document.getElementById('itemPrice');
         const itemQuantityInput = document.getElementById('itemQuantity');
-        const submitOrderButton = document.getElementById('submitOrder'); // Dieser Button triggert jetzt das Trinkgeld-Modal
+        const submitOrderButton = document.getElementById('submitOrder');
         const ordersContainer = document.getElementById('ordersContainer');
         const userIdDisplay = document.getElementById('userIdDisplay');
         const loadingOrdersDiv = document.getElementById('loadingOrders');
@@ -395,7 +396,7 @@
         const cancelActionButton = document.getElementById('cancelAction');
         let currentAction = null;
 
-        // NEU: Trinkgeld Modal Elements
+        // Trinkgeld Modal Elements
         const tipModal = document.getElementById('tipModal');
         const tipOptionButtons = document.querySelectorAll('.tip-option-btn');
         const confirmTipButton = document.getElementById('confirmTipButton');
@@ -418,7 +419,10 @@
 
                 if (ADMIN_UIDS.includes(currentUserId)) {
                     adminTabsDiv.classList.remove('hidden');
-                    ordersTabButton.click(); // Initial den Orders Tab aktivieren
+                    // Sicherstellen, dass ordersTabButton existiert, bevor click() aufgerufen wird
+                    if (ordersTabButton) {
+                        ordersTabButton.click(); // Initial den Orders Tab aktivieren
+                    }
                     
                     const orderFormSpace = orderFormSection.querySelector('.space-y-4');
                     if (orderFormSpace && !document.getElementById('hoferTripButton')) {
@@ -449,7 +453,7 @@
             }
         });
 
-        // NEU: Initialisiere Financial Summary Dokument
+        // Initialisiere Financial Summary Dokument
         async function initFinancialSummary() {
             try {
                 const docRef = doc(financialSummaryCollection, 'overall');
@@ -468,7 +472,7 @@
         }
 
 
-        // NEU: Funktion zum Laden des Benutzerprofils und der letzten Bestellung
+        // Funktion zum Laden des Benutzerprofils und der letzten Bestellung
         async function loadUserProfile() {
             if (!currentUserId) return;
 
@@ -486,8 +490,8 @@
             });
         }
 
-        // NEU: Funktion zum Speichern der letzten Bestellung im Benutzerprofil
-        async function saveLastOrderToProfile(orderDetails, itemPrice, quantity, classroom) { // classroom hinzugefügt
+        // Funktion zum Speichern der letzten Bestellung im Benutzerprofil
+        async function saveLastOrderToProfile(orderDetails, itemPrice, quantity, classroom) {
             if (!currentUserId) return;
             const userProfileRef = doc(db, userProfilesCollection, currentUserId);
             try {
@@ -496,7 +500,7 @@
                         orderDetails,
                         itemPrice,
                         quantity,
-                        classroom // classroom hinzugefügt
+                        classroom
                     },
                     lastOrderTimestamp: serverTimestamp()
                 }, { merge: true });
@@ -608,7 +612,7 @@
             }
         });
 
-        // NEU: Funktion zum Anzeigen des Trinkgeld-Modals
+        // Funktion zum Anzeigen des Trinkgeld-Modals
         function showTipModal() {
             tipModal.style.display = 'flex';
             // Setze den initialen Auswahlzustand für kein Trinkgeld
@@ -617,12 +621,12 @@
             selectedTipAmount = 0.00;
         }
 
-        // NEU: Funktion zum Verstecken des Trinkgeld-Modals
+        // Funktion zum Verstecken des Trinkgeld-Modals
         function hideTipModal() {
             tipModal.style.display = 'none';
         }
 
-        // NEU: Event Listener für Trinkgeld-Optionen
+        // Event Listener für Trinkgeld-Optionen
         tipOptionButtons.forEach(button => {
             button.addEventListener('click', () => {
                 tipOptionButtons.forEach(btn => btn.classList.remove('selected'));
@@ -631,7 +635,7 @@
             });
         });
 
-        // NEU: Event Listener für Bestätigung im Trinkgeld-Modal
+        // Event Listener für Bestätigung im Trinkgeld-Modal
         confirmTipButton.addEventListener('click', () => {
             hideTipModal();
             // Jetzt die Bestellung abschicken mit dem gewählten Trinkgeld
@@ -654,7 +658,7 @@
                     orderDetails: details,
                     itemPrice: itemPrice,
                     quantity: quantity,
-                    tipAmount: tipAmount, // NEU: Trinkgeld speichern
+                    tipAmount: tipAmount,
                     status: 'offen',
                     createdAt: serverTimestamp(),
                     orderedByUserId: currentUserId,
@@ -679,7 +683,7 @@
             }
         }
 
-        // NEU: Funktion zur Aktualisierung der Finanzübersicht
+        // Funktion zur Aktualisierung der Finanzübersicht
         async function updateFinancialSummary(orderId, oldStatus, newStatus, itemPrice, quantity, tipAmount) {
             const financialDocRef = doc(financialSummaryCollection, 'overall');
 
@@ -754,7 +758,7 @@
                  q = query(q, orderBy('customerName', sortDirection));
             } else if (sortField === 'createdAt') {
                  q = query(q, orderBy('createdAt', sortDirection));
-            } else if (sortField === 'classroom') { // NEU: Sortierung nach Klassenzimmer
+            } else if (sortField === 'classroom') { // Sortierung nach Klassenzimmer
                  q = query(q, orderBy('classroom', sortDirection));
             }
 
@@ -827,7 +831,7 @@
             itemPriceEl.textContent = `Artikelpreis: ${formattedItemPrice} €`;
             orderDiv.appendChild(itemPriceEl);
 
-            const tipEl = document.createElement('p'); // NEU: Trinkgeld anzeigen
+            const tipEl = document.createElement('p'); // Trinkgeld anzeigen
             tipEl.className = 'text-sm text-purple-700';
             const formattedTip = (order.tipAmount || 0).toFixed(2).replace('.', ',');
             tipEl.textContent = `Trinkgeld: ${formattedTip} €`;
@@ -893,7 +897,7 @@
                     const newStatus = e.target.value;
                     showModal(
                         `Möchtest du den Status für ${order.customerName}'s Bestellung wirklich auf "${newStatus}" ändern?`,
-                        () => updateOrderStatus(orderId, order.status, newStatus, order.itemPrice, order.quantity, order.tipAmount) // Alte Status-Info übergeben
+                        () => updateOrderStatus(orderId, order.status, newStatus, order.itemPrice, order.quantity, order.tipAmount)
                     );
                 });
                 adminControlsDiv.appendChild(statusChangeSelect);
@@ -941,7 +945,6 @@
                         `Möchtest du die Bestellung von ${order.customerName} wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.`,
                         async () => {
                             // Bevor die Bestellung gelöscht wird, die Finanzübersicht anpassen
-                            // Hier prüfen wir den Status der Bestellung, die GELÖSCHT wird.
                             if (order.status === 'bezahlt') {
                                 await updateFinancialSummary(orderId, 'bezahlt', 'storniert', order.itemPrice, order.quantity, order.tipAmount);
                             }
@@ -970,7 +973,7 @@
                 });
                 console.log(`Order ${orderId} status updated to: ${newStatus}`);
                 
-                // NEU: Finanzübersicht aktualisieren, wenn Status bezahlt wird oder von bezahlt wechselt
+                // Finanzübersicht aktualisieren, wenn Status bezahlt wird oder von bezahlt wechselt
                 await updateFinancialSummary(orderId, oldStatus, newStatus, itemPrice, quantity, tipAmount);
 
             } catch (error) {
@@ -1020,12 +1023,12 @@
         async function updateAdminDashboard(orders) {
             const openOrdersCount = orders.filter(o => o.status === 'offen').length;
             const totalRevenuePaidOrders = calculateTotalRevenueFromPaidOrders(orders); // Gesamtumsatz der bezahlten Bestellungen (enthält auch itemPrice)
-            const financialSummaryDoc = await getDoc(doc(financialSummaryCollection, 'overall')); // NEU: Finanz-Summary laden
+            const financialSummaryDoc = await getDoc(doc(financialSummaryCollection, 'overall')); // Finanz-Summary laden
             const currentFinancials = financialSummaryDoc.exists ? financialSummaryDoc.data() : { totalCollectedRevenue: 0, totalProductExpenses: 0 };
             
             const totalCollectedRevenue = currentFinancials.totalCollectedRevenue || 0;
             const totalProductExpenses = currentFinancials.totalProductExpenses || 0;
-            const totalProfit = totalCollectedRevenue - totalProductExpenses; // NEU: Gewinnberechnung
+            const totalProfit = totalCollectedRevenue - totalProductExpenses; // Gewinnberechnung
 
             const topItemsHtml = renderTopItems(orders);
             const aggregatedShoppingListHtml = renderAggregatedShoppingList(orders);
@@ -1414,31 +1417,28 @@
         });
 
         // Admin Tab Navigation
+        // Wichtig: Die Tab-Buttons müssen Event Listener für 'click' haben, um die Anzeige zu steuern
+        // und die Sektionen korrekt in den tabContentDiv zu verschieben/entfernen.
+        // Der Bug mit den "nicht anklickbaren Tabs" lag oft an falschen Anzeigestatus von Sektionen
+        // oder daran, dass innerHTML = '' die DOM-Elemente komplett entfernt hat.
+        // Die fixierte Logik stellt sicher, dass die Elemente nur verschoben werden, wenn sie nicht schon da sind,
+        // und ihre Display-Eigenschaft korrekt gesetzt wird.
         ordersTabButton.addEventListener('click', () => {
             ordersTabButton.classList.add('active');
             productsTabButton.classList.remove('active');
             dashboardTabButton.classList.remove('active');
             
-            tabContentDiv.innerHTML = ''; // Vorherigen Tab-Inhalt löschen
+            // Verstecke alle Sektionen außerhalb des Tab-Contents zuerst
+            orderFormSection.style.display = 'none';
+            ordersFilterSortSection.style.display = 'none';
+            ordersListSection.style.display = 'none';
+            tabContentDiv.innerHTML = ''; // Vorherigen Tab-Inhalt leeren
 
-            // Sicherstellen, dass die Elemente im DOM existieren und dann anhängen
-            // Das ist wichtig, da innerHTML = '' die Elemente aus dem DOM entfernt.
-            // Wir müssen sie aus der originalen HTML-Struktur "entfernen" und in den Tab Content verschieben.
-            // Zuerst sicherstellen, dass sie nicht schon an anderer Stelle im tabContentDiv sind
-            // und sie dann von ihrem "Originalplatz" im Body abhängen, falls nötig
-            const originalParent = document.body.querySelector('div.bg-white.shadow-2xl');
-            
-            if (orderFormSection.parentNode !== tabContentDiv) {
-                tabContentDiv.appendChild(orderFormSection);
-            }
-            if (ordersFilterSortSection.parentNode !== tabContentDiv) {
-                tabContentDiv.appendChild(ordersFilterSortSection);
-            }
-            if (ordersListSection.parentNode !== tabContentDiv) {
-                tabContentDiv.appendChild(ordersListSection);
-            }
+            // Sektionen in den Tab-Content verschieben und sichtbar machen
+            tabContentDiv.appendChild(orderFormSection);
+            tabContentDiv.appendChild(ordersFilterSortSection);
+            tabContentDiv.appendChild(ordersListSection);
 
-            // Sektionen sichtbar machen
             orderFormSection.style.display = 'block';
             ordersFilterSortSection.style.display = 'block';
             ordersListSection.style.display = 'block';
@@ -1451,11 +1451,12 @@
             productsTabButton.classList.add('active');
             dashboardTabButton.classList.remove('active');
             
-            // Bestehende Sektionen ausblenden
+            // Verstecke Sektionen, die nicht in diesem Tab sind
             orderFormSection.style.display = 'none';
             ordersFilterSortSection.style.display = 'none';
             ordersListSection.style.display = 'none';
-            
+
+            // Hier wird der HTML-Inhalt des Produktmanagements direkt in den tabContentDiv geladen
             renderProductManagement();
         });
 
@@ -1464,12 +1465,13 @@
             productsTabButton.classList.remove('active');
             dashboardTabButton.classList.add('active');
             
-            // Bestehende Sektionen ausblenden
+            // Verstecke Sektionen, die nicht in diesem Tab sind
             orderFormSection.style.display = 'none';
             ordersFilterSortSection.style.display = 'none';
             ordersListSection.style.display = 'none';
             
-            loadOrders(); // Löst updateAdminDashboard aus
+            // Das Dashboard wird durch loadOrders() aktualisiert, die dann updateAdminDashboard aufruft
+            loadOrders();
         });
     </script>
 </body>
