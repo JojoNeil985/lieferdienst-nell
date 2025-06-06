@@ -46,9 +46,6 @@
             padding: 10px 20px;
             border-radius: 0.375rem;
         }
-        /* Styles für den Notification Prompt (jetzt gelöscht, aber für den Fall der Fälle) */
-        /* #notificationPrompt { ... } */
-
         /* Tabs für Admin-Ansicht */
         .tab-button {
             padding: 0.75rem 1.25rem;
@@ -71,6 +68,25 @@
             border-radius: 0 0.5rem 0.5rem 0.5rem;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
+
+        /* NEU: Trinkgeld Modal */
+        #tipModal .tip-option-btn {
+            background-color: #e0e7ff; /* indigo-100 */
+            color: #4f46e5; /* indigo-600 */
+            padding: 0.75rem 1.25rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            margin: 0.5rem;
+            transition: all 0.2s ease-in-out;
+            cursor: pointer;
+        }
+        #tipModal .tip-option-btn:hover {
+            background-color: #c7d2fe; /* indigo-200 */
+        }
+        #tipModal .tip-option-btn.selected {
+            background-color: #6366f1; /* indigo-500 */
+            color: white;
+        }
     </style>
 </head>
 <body class="bg-gradient-to-br from-sky-500 to-indigo-600 min-h-screen flex flex-col items-center justify-center p-4 text-gray-800">
@@ -87,7 +103,7 @@
             <p class="text-sm text-gray-500">User ID: <span id="userIdDisplay">Wird geladen...</span></p>
         </div>
 
-        <!-- NEU: Admin Tabs -->
+        <!-- Admin Tabs -->
         <div id="adminTabs" class="hidden">
             <div class="flex border-b border-gray-200 mb-4">
                 <button id="ordersTabButton" class="tab-button active">Bestellungen</button>
@@ -102,7 +118,7 @@
         <!-- Bestellungsformular (standardmäßig sichtbar, für Nicht-Admins immer da, für Admins im Tab) -->
         <section id="order-form-section" class="mb-8">
             <h2 class="text-2xl font-semibold mb-4 text-gray-700">Neue Bestellung aufgeben:</h2>
-            <!-- NEU: Nächste Lieferzeit Hinweis -->
+            <!-- Nächste Lieferzeit Hinweis -->
             <div class="bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-3 mb-4 rounded-md">
                 <p class="font-medium">Nächste Lieferung: ca. 12:30 Uhr (Bestellen bis 12:20 Uhr!)</p>
             </div>
@@ -111,7 +127,7 @@
                     <label for="customerName" class="block text-sm font-medium text-gray-700">Dein Name:</label>
                     <input type="text" id="customerName" name="customerName" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="Max Mustermann">
                 </div>
-                <!-- NEU: Klassenzimmer Input -->
+                <!-- Klassenzimmer Input -->
                 <div>
                     <label for="classroom" class="block text-sm font-medium text-gray-700">Klassenzimmer/Raum (optional):</label>
                     <input type="text" id="classroom" name="classroom" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="z.B. 8b, Lehrerzimmer">
@@ -204,6 +220,7 @@
         </section>
     </div>
 
+    <!-- Bestätigungsmodal -->
     <div id="confirmationModal" class="modal">
         <div class="modal-content">
             <p id="modalMessage" class="mb-4 text-lg">Möchtest du diese Aktion wirklich durchführen?</p>
@@ -211,6 +228,23 @@
                 <button id="confirmAction" class="bg-green-500 hover:bg-green-600 text-white">Ja</button>
                 <button id="cancelAction" class="bg-red-500 hover:bg-red-600 text-white">Nein</button>
             </div>
+        </div>
+    </div>
+
+    <!-- NEU: Trinkgeld-Modal -->
+    <div id="tipModal" class="modal">
+        <div class="modal-content">
+            <p class="mb-4 text-lg font-semibold text-gray-800">Möchtest du Trinkgeld geben?</p>
+            <p class="text-sm text-gray-600 mb-6">Jedes Trinkgeld geht direkt an den fleißigen Lieferanten!</p>
+            <div class="flex justify-center flex-wrap mb-6">
+                <button class="tip-option-btn" data-tip="0.20">0,20 €</button>
+                <button class="tip-option-btn" data-tip="0.50">0,50 €</button>
+                <button class="tip-option-btn" data-tip="1.00">1,00 €</button>
+                <button class="tip-option-btn" data-tip="0.00" id="noTipButton">Kein Trinkgeld</button>
+            </div>
+            <button id="confirmTipButton" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg shadow-md transition duration-150 ease-in-out">
+                Bestellung abschließen
+            </button>
         </div>
     </div>
 
@@ -230,16 +264,12 @@
         </button>
     </div>
 
-    <!-- Benutzerdefinierter Benachrichtigungs-Erlaubnis-Dialog (ENTFERNT) -->
-    <!-- <div id="notificationPrompt" class="hidden"> ... </div> -->
-
-
     <script type="module">
         // Firebase Imports
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, serverTimestamp, query, orderBy, where, getDocs, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        // KEIN Import für Firebase Messaging mehr (für Handy-Push Notifications)
+        // getDoc, updateDoc, deleteDoc hinzugefügt für Financial Summary Transaktionen
+        import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, serverTimestamp, query, orderBy, where, getDocs, setDoc, runTransaction } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 
@@ -258,13 +288,16 @@
         let app;
         let db;
         let auth;
-        // let messaging; // NICHT MEHR BENÖTIGT
         let ordersCollection;
         let productsCollection;
         let userProfilesCollection;
+        let financialSummaryCollection; // NEU: Financial Summary Collection
         let ordersCollectionPath = `artifacts/${firebaseConfig.appId}/public/data/lieferdienstNellOrders`;
         let productsCollectionPath = `artifacts/${firebaseConfig.appId}/public/data/products`;
         let userProfilesCollectionPath = `artifacts/${firebaseConfig.appId}/users`;
+        let financialSummaryDocPath = `artifacts/${firebaseConfig.appId}/public/data/financialSummary/overall`; // NEU: Pfad zum Finanz-Summary-Dokument
+        let hoferStatusDocRef; // Firestore DocumentReference
+
         let currentUserId = null;
 
         // Konstante für die Liefergebühr
@@ -278,17 +311,6 @@
         // Initial leere Produktliste, wird aus Firestore geladen
         let POPULAR_ITEMS = [{ name: "Wähle ein Produkt...", price: 0, isPlaceholder: true }];
 
-        // Konstante für Hofer Trip Status (Firestore)
-        const HOFER_STATUS_DOC_PATH = `artifacts/${firebaseConfig.appId}/public/data/appStatus/lieferdienstStatus`;
-        let hoferStatusDocRef; // Firestore DocumentReference
-
-        // KEINE Firestore Collection für Geräte-Tokens mehr
-        // const DEVICE_TOKENS_COLLECTION_PATH = `artifacts/${firebaseConfig.appId}/public/data/deviceTokens`;
-        // let deviceTokensCollection;
-
-        // KEIN VAPID Public Key mehr
-        // const VAPID_PUBLIC_KEY = 'DEIN_VAPID_PUBLIC_KEY_HIER_EINFUEGEN'; 
-
         // Aktuelle Filter- und Sortier-Einstellungen
         let currentStatusFilter = 'all';
         let currentSortOrder = 'createdAt_desc';
@@ -298,18 +320,17 @@
             app = initializeApp(firebaseConfig);
             db = getFirestore(app);
             auth = getAuth(app);
-            // messaging = getMessaging(app); // NICHT MEHR BENÖTIGT
             setLogLevel('debug');
             console.log("Firebase App initialized successfully.");
 
             ordersCollection = collection(db, ordersCollectionPath);
             productsCollection = collection(db, productsCollectionPath);
             userProfilesCollection = collection(db, userProfilesCollectionPath);
-            console.log("Collections initialized successfully.");
-
+            financialSummaryCollection = collection(db, `artifacts/${firebaseConfig.appId}/public/data/financialSummary`); // NEU
             hoferStatusDocRef = doc(db, HOFER_STATUS_DOC_PATH);
 
-            // deviceTokensCollection = collection(db, DEVICE_TOKENS_COLLECTION_PATH); // NICHT MEHR BENÖTIGT
+            // Initialisiere das Financial Summary Dokument, falls es nicht existiert
+            initFinancialSummary();
 
         } catch (error) {
             console.error("Error initializing Firebase:", error);
@@ -321,11 +342,11 @@
 
         // --- DOM Elements ---
         const customerNameInput = document.getElementById('customerName');
-        const classroomInput = document.getElementById('classroom'); // NEU
+        const classroomInput = document.getElementById('classroom');
         const orderDetailsInput = document.getElementById('orderDetails');
         const itemPriceInput = document.getElementById('itemPrice');
         const itemQuantityInput = document.getElementById('itemQuantity');
-        const submitOrderButton = document.getElementById('submitOrder');
+        const submitOrderButton = document.getElementById('submitOrder'); // Dieser Button triggert jetzt das Trinkgeld-Modal
         const ordersContainer = document.getElementById('ordersContainer');
         const userIdDisplay = document.getElementById('userIdDisplay');
         const loadingOrdersDiv = document.getElementById('loadingOrders');
@@ -345,13 +366,6 @@
         const hoferNotificationMessage = document.getElementById('hoferNotificationMessage');
         const dismissHoferNotificationButton = document.getElementById('dismissHoferNotification');
         const endHoferTripButton = document.getElementById('endHoferTripButton');
-
-        // Alte Notification Buttons und Prompt entfernt
-        // const enableNotificationsBtn = document.getElementById('enableNotifications');
-        // const disableNotificationsBtn = document.getElementById('disableNotifications');
-        // const notificationPrompt = document.getElementById('notificationPrompt');
-        // const allowNotificationsBtn = document.getElementById('allowNotificationsBtn');
-        // const denyNotificationsBtn = document.getElementById('denyNotificationsBtn');
 
         // Elemente für Filter und Sortierung
         const statusFilterSelect = document.getElementById('statusFilter');
@@ -374,12 +388,21 @@
         const reorderLastOrderButton = document.getElementById('reorderLastOrder');
 
 
-        // Modal elements
+        // Modal elements (general confirmation)
         const confirmationModal = document.getElementById('confirmationModal');
         const modalMessage = document.getElementById('modalMessage');
         const confirmActionButton = document.getElementById('confirmAction');
         const cancelActionButton = document.getElementById('cancelAction');
         let currentAction = null;
+
+        // NEU: Trinkgeld Modal Elements
+        const tipModal = document.getElementById('tipModal');
+        const tipOptionButtons = document.querySelectorAll('.tip-option-btn');
+        const confirmTipButton = document.getElementById('confirmTipButton');
+        let selectedTipAmount = 0.00; // Standardwert
+
+        // Temporäre Daten für Bestellung, bevor Trinkgeld gewählt wird
+        let pendingOrderData = {};
 
 
         // --- Authentication ---
@@ -389,46 +412,29 @@
                 userIdDisplay.textContent = currentUserId;
                 console.log("User is signed in with UID:", currentUserId);
                 
-                // Lade Produkte und Bestellungen, sobald User eingeloggt ist
                 await loadProducts(); 
                 loadOrders(); 
-                loadUserProfile(); // Lade Nutzerprofil (für letzte Bestellung)
+                loadUserProfile(); 
 
-                // Admin-spezifische UI-Anpassungen
                 if (ADMIN_UIDS.includes(currentUserId)) {
-                    adminTabsDiv.classList.remove('hidden'); // Tabs anzeigen
-                    ordersTabButton.click(); // Initial den Orders Tab aktivieren (lädt Bestellungen)
+                    adminTabsDiv.classList.remove('hidden');
+                    ordersTabButton.click(); // Initial den Orders Tab aktivieren
                     
-                    // Füge Hofer Button ein, falls noch nicht vorhanden
-                    const orderFormSpace = orderFormSection.querySelector('.space-y-4'); // Referenz zum inneren div
+                    const orderFormSpace = orderFormSection.querySelector('.space-y-4');
                     if (orderFormSpace && !document.getElementById('hoferTripButton')) {
                         orderFormSpace.appendChild(hoferTripButton);
                     }
                 } else {
-                    adminTabsDiv.classList.add('hidden'); // Tabs für Nicht-Admins ausblenden
-                    // Stellen sicher, dass alle "Admin-Sections" außerhalb des Tab-Systems hidden sind
+                    adminTabsDiv.classList.add('hidden');
                     orderFormSection.style.display = 'block';
                     ordersFilterSortSection.style.display = 'block';
                     ordersListSection.style.display = 'block';
                     
-                    // Sicherstellen, dass der Hofer Button für Nicht-Admins nicht sichtbar ist
                     const existingHoferButton = document.getElementById('hoferTripButton');
                     if (existingHoferButton) {
                         existingHoferButton.remove();
                     }
                 }
-
-                // Service Worker-Registrierung war für Push Notifications, jetzt nicht mehr nötig
-                // if ('serviceWorker' in navigator) {
-                //     try {
-                //         const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
-                //         console.log('Service Worker registered with scope:', registration.scope);
-                //         updateNotificationButtons();
-                //     } catch (error) {
-                //         console.error('Service Worker registration failed:', error);
-                //     }
-                // }
-
             } else {
                 console.log("User is signed out. Attempting to sign in anonymously...");
                 userIdDisplay.textContent = "Authentifizierung...";
@@ -443,14 +449,30 @@
             }
         });
 
-        // --- Functions ---
+        // NEU: Initialisiere Financial Summary Dokument
+        async function initFinancialSummary() {
+            try {
+                const docRef = doc(financialSummaryCollection, 'overall');
+                const docSnap = await getDoc(docRef);
+                if (!docSnap.exists()) {
+                    await setDoc(docRef, {
+                        totalCollectedRevenue: 0, // Liefergebühren + Trinkgelder
+                        totalProductExpenses: 0, // Kosten der Artikel
+                        lastUpdated: serverTimestamp()
+                    });
+                    console.log("Financial Summary document initialized.");
+                }
+            } catch (error) {
+                console.error("Error initializing financial summary:", error);
+            }
+        }
+
 
         // NEU: Funktion zum Laden des Benutzerprofils und der letzten Bestellung
         async function loadUserProfile() {
             if (!currentUserId) return;
 
             const userProfileRef = doc(db, userProfilesCollection, currentUserId);
-            // Nutze onSnapshot für Echtzeit-Updates des Profils
             onSnapshot(userProfileRef, (docSnapshot) => {
                 if (docSnapshot.exists() && docSnapshot.data().lastOrderDetails) {
                     const lastOrder = docSnapshot.data().lastOrderDetails;
@@ -465,7 +487,7 @@
         }
 
         // NEU: Funktion zum Speichern der letzten Bestellung im Benutzerprofil
-        async function saveLastOrderToProfile(orderDetails, itemPrice, quantity) {
+        async function saveLastOrderToProfile(orderDetails, itemPrice, quantity, classroom) { // classroom hinzugefügt
             if (!currentUserId) return;
             const userProfileRef = doc(db, userProfilesCollection, currentUserId);
             try {
@@ -473,10 +495,11 @@
                     lastOrderDetails: {
                         orderDetails,
                         itemPrice,
-                        quantity
+                        quantity,
+                        classroom // classroom hinzugefügt
                     },
                     lastOrderTimestamp: serverTimestamp()
-                }, { merge: true }); // 'merge: true' um nur diese Felder zu aktualisieren
+                }, { merge: true });
                 console.log("Last order saved to user profile.");
             } catch (error) {
                 console.error("Error saving last order to user profile:", error);
@@ -484,22 +507,20 @@
         }
 
 
-        // NEU: Funktion zum Laden der Produkte aus Firestore
+        // Funktion zum Laden der Produkte aus Firestore
         async function loadProducts() {
             try {
-                // onSnapshot statt getDocs, um Produktliste live zu aktualisieren
                 onSnapshot(query(productsCollection, orderBy('order', 'asc')), (snapshot) => {
-                    POPULAR_ITEMS = [{ name: "Wähle ein Produkt...", price: 0, isPlaceholder: true }]; // Reset
+                    POPULAR_ITEMS = [{ name: "Wähle ein Produkt...", price: 0, isPlaceholder: true }];
                     snapshot.forEach(doc => {
                         const product = doc.data();
                         POPULAR_ITEMS.push(product);
                     });
                     POPULAR_ITEMS.push({ name: "Sonstiges...", price: 0, isOther: true });
-                    populatePopularItemsDropdown(); // Dropdown mit geladenen Produkten füllen
+                    populatePopularItemsDropdown();
                     console.log("Products loaded from Firestore:", POPULAR_ITEMS);
                 }, (error) => {
                     console.error("Error loading products (onSnapshot):", error);
-                    // showModal ist hier nicht ideal, da es bei jedem Fehler auftauchen würde
                 });
             } catch (error) {
                 console.error("Initial error setting up product listener:", error);
@@ -524,7 +545,7 @@
                 }
                 popularItemSelect.appendChild(option);
             });
-            handlePopularItemSelection(); // Initialen Zustand setzen
+            handlePopularItemSelection();
         }
 
         // Funktion zur Handhabung der Dropdown-Auswahl
@@ -534,41 +555,41 @@
 
             if (selectedItem.isOther) {
                 otherItemInputsDiv.classList.remove('hidden');
-                itemPriceInput.value = ''; // Leere Felder für Sonstiges
+                itemPriceInput.value = '';
                 orderDetailsInput.value = '';
-                quantityInputDiv.classList.remove('hidden'); // Menge ist auch bei "Sonstiges" relevant
-                itemQuantityInput.value = 1; // Standard auf 1 setzen
+                quantityInputDiv.classList.remove('hidden');
+                itemQuantityInput.value = 1;
             } else if (selectedItem.isPlaceholder) {
                 otherItemInputsDiv.classList.add('hidden');
                 orderDetailsInput.value = '';
                 itemPriceInput.value = '';
-                quantityInputDiv.classList.add('hidden'); // Menge verstecken bei Placeholder
+                quantityInputDiv.classList.add('hidden');
                 itemQuantityInput.value = 1;
             } else {
                 otherItemInputsDiv.classList.add('hidden');
                 orderDetailsInput.value = selectedItem.name;
                 itemPriceInput.value = selectedItem.price.toFixed(2);
-                quantityInputDiv.classList.remove('hidden'); // Menge anzeigen bei Produkt
-                itemQuantityInput.value = 1; // Standard auf 1 setzen
+                quantityInputDiv.classList.remove('hidden');
+                itemQuantityInput.value = 1;
             }
         }
 
 
-        // Function to show modal
+        // Function to show general confirmation modal
         function showModal(message, onConfirm) {
             modalMessage.textContent = message;
             currentAction = onConfirm;
-            confirmationModal.style.display = "flex"; // Verwende flex für Zentrierung
+            confirmationModal.style.display = "flex";
             confirmActionButton.focus();
         }
 
-        // Function to hide modal
+        // Function to hide general confirmation modal
         function hideModal() {
             confirmationModal.style.display = "none";
             currentAction = null;
         }
 
-        // Event listeners for modal buttons
+        // Event listeners for general modal buttons
         confirmActionButton.addEventListener('click', () => {
             if (currentAction) {
                 currentAction();
@@ -580,56 +601,46 @@
             hideModal();
         });
 
-        // Close modal if clicked outside of it
+        // Close general modal if clicked outside of it
         window.addEventListener('click', (event) => {
             if (event.target == confirmationModal) {
                 hideModal();
             }
         });
 
+        // NEU: Funktion zum Anzeigen des Trinkgeld-Modals
+        function showTipModal() {
+            tipModal.style.display = 'flex';
+            // Setze den initialen Auswahlzustand für kein Trinkgeld
+            tipOptionButtons.forEach(btn => btn.classList.remove('selected'));
+            document.getElementById('noTipButton').classList.add('selected');
+            selectedTipAmount = 0.00;
+        }
 
-        // Add new order
-        async function addOrder() {
-            const name = customerNameInput.value.trim();
-            const classroom = classroomInput.value.trim(); // NEU: Klassenzimmer
-            let details;
-            let itemPrice;
-            const quantity = parseInt(itemQuantityInput.value) || 1;
+        // NEU: Funktion zum Verstecken des Trinkgeld-Modals
+        function hideTipModal() {
+            tipModal.style.display = 'none';
+        }
 
-            const selectedIndex = popularItemSelect.value;
-            const selectedItem = POPULAR_ITEMS[selectedIndex];
+        // NEU: Event Listener für Trinkgeld-Optionen
+        tipOptionButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                tipOptionButtons.forEach(btn => btn.classList.remove('selected'));
+                button.classList.add('selected');
+                selectedTipAmount = parseFloat(button.dataset.tip);
+            });
+        });
 
-            if (selectedItem && !selectedItem.isPlaceholder) {
-                if (selectedItem.isOther) {
-                    details = orderDetailsInput.value.trim();
-                    itemPrice = parseFloat(itemPriceInput.value);
-                } else {
-                    details = selectedItem.name;
-                    itemPrice = selectedItem.price;
-                }
-            } else {
-                details = orderDetailsInput.value.trim();
-                itemPrice = parseFloat(itemPriceInput.value);
-            }
-
-            if (!name) {
-                showModal("Bitte gib deinen Namen ein.", () => {});
-                return;
-            }
-            if (!details) {
-                showModal("Bitte gib die Details deiner Bestellung ein.", () => {});
-                return;
-            }
-            if (isNaN(itemPrice) || itemPrice < 0) {
-                showModal("Bitte gib einen gültigen Preis für den Artikel ein (z.B. 1.50).", () => {});
-                return;
-            }
-            if (isNaN(quantity) || quantity < 1) {
-                showModal("Bitte gib eine gültige Menge (mind. 1) ein.", () => {});
-                return;
-            }
+        // NEU: Event Listener für Bestätigung im Trinkgeld-Modal
+        confirmTipButton.addEventListener('click', () => {
+            hideTipModal();
+            // Jetzt die Bestellung abschicken mit dem gewählten Trinkgeld
+            proceedAddOrder(pendingOrderData.name, pendingOrderData.classroom, pendingOrderData.details, pendingOrderData.itemPrice, pendingOrderData.quantity, selectedTipAmount);
+        });
 
 
+        // Add new order (Diese Funktion wird jetzt durch das Trinkgeld-Modal getriggert)
+        async function proceedAddOrder(name, classroom, details, itemPrice, quantity, tipAmount) {
             if (!ordersCollection) {
                 console.error("Orders collection is not initialized.");
                 showModal("Fehler: Datenbankverbindung nicht bereit.", () => {});
@@ -637,34 +648,83 @@
             }
 
             try {
-                await addDoc(ordersCollection, {
+                const docRef = await addDoc(ordersCollection, {
                     customerName: name,
-                    classroom: classroom, // NEU: Klassenzimmer speichern
+                    classroom: classroom,
                     orderDetails: details,
                     itemPrice: itemPrice,
                     quantity: quantity,
-                    status: 'offen', // Standard-Status
+                    tipAmount: tipAmount, // NEU: Trinkgeld speichern
+                    status: 'offen',
                     createdAt: serverTimestamp(),
                     orderedByUserId: currentUserId,
-                    notes: '' // NEU: Leere Notizen beim Erstellen
+                    notes: ''
                 });
+                console.log("Order added successfully with ID:", docRef.id);
+
                 customerNameInput.value = '';
-                classroomInput.value = ''; // NEU: Klassenzimmer zurücksetzen
+                classroomInput.value = '';
                 orderDetailsInput.value = '';
                 itemPriceInput.value = '';
                 itemQuantityInput.value = 1;
                 popularItemSelect.value = 0;
                 handlePopularItemSelection();
-                console.log("Order added successfully!");
 
-                // Letzte Bestellung im User-Profil speichern
-                await saveLastOrderToProfile(details, itemPrice, quantity);
+                // Letzte Bestellung im User-Profil speichern (ohne Trinkgeld, nur Details)
+                await saveLastOrderToProfile(details, itemPrice, quantity, classroom);
 
             } catch (error) {
                 console.error("Error adding order: ", error);
                 showModal("Fehler beim Hinzufügen der Bestellung. Versuche es später erneut.", () => {});
             }
         }
+
+        // NEU: Funktion zur Aktualisierung der Finanzübersicht
+        async function updateFinancialSummary(orderId, oldStatus, newStatus, itemPrice, quantity, tipAmount) {
+            const financialDocRef = doc(financialSummaryCollection, 'overall');
+
+            try {
+                await runTransaction(db, async (transaction) => {
+                    const sfDoc = await transaction.get(financialDocRef);
+                    let totalCollectedRevenue = sfDoc.exists ? sfDoc.data().totalCollectedRevenue || 0 : 0;
+                    let totalProductExpenses = sfDoc.exists ? sfDoc.data().totalProductExpenses || 0 : 0;
+
+                    const currentItemCost = (itemPrice || 0) * (quantity || 1);
+                    const currentRevenueFromOrder = DELIVERY_FEE + (tipAmount || 0);
+
+                    // Effektive Finanzwerte der Bestellung
+                    let effectiveRevenue = 0;
+                    let effectiveExpense = 0;
+
+                    // Alte Bestellung war bezahlt, neue ist nicht bezahlt -> Finanzwerte rückgängig machen
+                    if (oldStatus === 'bezahlt' && newStatus !== 'bezahlt') {
+                        effectiveRevenue = -currentRevenueFromOrder;
+                        effectiveExpense = -currentItemCost;
+                    }
+                    // Alte Bestellung war nicht bezahlt, neue ist bezahlt -> Finanzwerte hinzufügen
+                    else if (oldStatus !== 'bezahlt' && newStatus === 'bezahlt') {
+                        effectiveRevenue = currentRevenueFromOrder;
+                        effectiveExpense = currentItemCost;
+                    }
+                    // Wenn der Status von bezahlt zu bezahlt geändert wird (z.B. nur Notizen), keine Änderung
+                    // Wenn der Status von offen zu offen geändert wird, keine Änderung
+
+                    totalCollectedRevenue += effectiveRevenue;
+                    totalProductExpenses += effectiveExpense;
+                    
+                    transaction.set(financialDocRef, {
+                        totalCollectedRevenue: totalCollectedRevenue,
+                        totalProductExpenses: totalProductExpenses,
+                        lastUpdated: serverTimestamp()
+                    });
+                });
+                console.log(`Financial summary updated for order ${orderId}.`);
+            } catch (e) {
+                console.error(`Transaction failed for order ${orderId}:`, e);
+                showModal(`Fehler bei der Aktualisierung der Finanzdaten: ${e.message}`, () => {});
+            }
+        }
+
 
         // Load and display orders
         function loadOrders() {
@@ -689,12 +749,13 @@
 
             const [sortField, sortDirection] = currentSortOrder.split('_');
             if (sortField === 'totalPrice') {
-                 // Sortierung nach Gesamtpreis muss clientseitig erfolgen
                  console.warn("Client-seitige Sortierung nach Gesamtpreis ist aktiv.");
             } else if (sortField === 'customerName') {
-                 q = query(q, orderBy('customerName', sortDirection)); // Sortiere nach customerName für A-Z/Z-A
+                 q = query(q, orderBy('customerName', sortDirection));
             } else if (sortField === 'createdAt') {
-                 q = query(q, orderBy('createdAt', sortDirection)); // Sortiere nach Erstellungszeit
+                 q = query(q, orderBy('createdAt', sortDirection));
+            } else if (sortField === 'classroom') { // NEU: Sortierung nach Klassenzimmer
+                 q = query(q, orderBy('classroom', sortDirection));
             }
 
 
@@ -706,25 +767,15 @@
                     orders.push({ ...order, id: docSnapshot.id });
                 });
 
-                // Client-seitige Sortierung für Gesamtpreis und Klassenzimmer (falls nötig)
+                // Client-seitige Sortierung für Gesamtpreis
                 if (sortField === 'totalPrice') {
                     orders.sort((a, b) => {
-                        const priceA = (a.itemPrice || 0) * (a.quantity || 1) + DELIVERY_FEE;
-                        const priceB = (b.itemPrice || 0) * (b.quantity || 1) + DELIVERY_FEE;
+                        const priceA = (a.itemPrice || 0) * (a.quantity || 1) + DELIVERY_FEE + (a.tipAmount || 0);
+                        const priceB = (b.itemPrice || 0) * (b.quantity || 1) + DELIVERY_FEE + (b.tipAmount || 0);
                         return sortDirection === 'asc' ? priceA - priceB : priceB - priceA;
-                    });
-                } else if (sortField === 'classroom') { // Beispiel für Client-seitige Sortierung nach Klassenzimmer
-                    orders.sort((a, b) => {
-                        const classroomA = a.classroom || '';
-                        const classroomB = b.classroom || '';
-                        return sortDirection === 'asc' ? classroomA.localeCompare(classroomB) : classroomB.localeCompare(classroomA);
                     });
                 }
                 
-                // Gruppieren nach Klassenzimmer für die Anzeige (optional, hier einfach nur sortiert)
-                // orders.sort((a, b) => (a.classroom || '').localeCompare(b.classroom || ''));
-
-
                 if (orders.length === 0) {
                     noOrdersDiv.classList.remove('hidden');
                     ordersContainer.innerHTML = '';
@@ -750,38 +801,52 @@
         function displayOrder(order, orderId) {
             const orderDiv = document.createElement('div');
             orderDiv.className = `p-4 rounded-lg shadow-md border-l-4 status-${order.status || 'offen'}`;
-            orderDiv.setAttribute('data-order-id', orderId); // Speichere die ID am Element
+            orderDiv.setAttribute('data-order-id', orderId);
 
             const nameEl = document.createElement('h3');
             nameEl.className = 'text-lg font-semibold text-gray-800';
             nameEl.textContent = order.customerName;
 
-            // NEU: Klassenzimmer anzeigen
             if (order.classroom) {
-                const classroomEl = document.createElement('p');
-                classroomEl.className = 'text-sm text-gray-500 mt-0.5';
-                classroomEl.textContent = `Raum: ${order.classroom}`;
-                nameEl.appendChild(classroomEl); // Füge Klassenzimmer unter den Namen ein
+                const classroomEl = document.createElement('span'); // Span statt P, um inline zu bleiben
+                classroomEl.className = 'text-sm text-gray-500 ml-2'; // ml-2 für Abstand
+                classroomEl.textContent = `(Raum: ${order.classroom})`;
+                nameEl.appendChild(classroomEl);
             }
+            orderDiv.appendChild(nameEl); // Füge nameEl zuerst hinzu
 
             const detailsEl = document.createElement('p');
             detailsEl.className = 'text-gray-700 my-1';
             detailsEl.textContent = `${order.quantity}x ${order.orderDetails}`;
+            orderDiv.appendChild(detailsEl);
+
 
             const itemPriceEl = document.createElement('p');
             itemPriceEl.className = 'text-sm text-gray-600';
             const formattedItemPrice = ((order.itemPrice || 0) * (order.quantity || 1)).toFixed(2).replace('.', ',');
             itemPriceEl.textContent = `Artikelpreis: ${formattedItemPrice} €`;
+            orderDiv.appendChild(itemPriceEl);
 
-            const totalPrice = ((order.itemPrice || 0) * (order.quantity || 1)) + DELIVERY_FEE;
+            const tipEl = document.createElement('p'); // NEU: Trinkgeld anzeigen
+            tipEl.className = 'text-sm text-purple-700';
+            const formattedTip = (order.tipAmount || 0).toFixed(2).replace('.', ',');
+            tipEl.textContent = `Trinkgeld: ${formattedTip} €`;
+            orderDiv.appendChild(tipEl);
+
+
+            const totalPrice = ((order.itemPrice || 0) * (order.quantity || 1)) + DELIVERY_FEE + (order.tipAmount || 0);
             const totalPriceEl = document.createElement('p');
             totalPriceEl.className = 'text-md font-bold text-indigo-700 mt-1';
             const formattedTotalPrice = totalPrice.toFixed(2).replace('.', ',');
             totalPriceEl.textContent = `Gesamtpreis: ${formattedTotalPrice} €`;
+            orderDiv.appendChild(totalPriceEl);
+
 
             const feeEl = document.createElement('p');
             feeEl.className = 'text-sm text-emerald-700 font-medium';
             feeEl.textContent = `(+ ${DELIVERY_FEE.toFixed(2).replace('.', ',')} € Liefergebühr)`;
+            orderDiv.appendChild(feeEl);
+
 
             const statusEl = document.createElement('p');
             let statusText = '';
@@ -795,6 +860,7 @@
             }
             statusEl.className = `text-sm font-medium ${statusColor}`;
             statusEl.textContent = `Status: ${statusText}`;
+            orderDiv.appendChild(statusEl);
 
             const timestampEl = document.createElement('p');
             timestampEl.className = 'text-xs text-gray-500 mt-2';
@@ -803,14 +869,8 @@
             } else {
                 timestampEl.textContent = `Bestellzeitpunkt unbekannt`;
             }
-
-            orderDiv.appendChild(nameEl);
-            orderDiv.appendChild(detailsEl);
-            orderDiv.appendChild(itemPriceEl);
-            orderDiv.appendChild(feeEl);
-            orderDiv.appendChild(totalPriceEl);
-            orderDiv.appendChild(statusEl);
             orderDiv.appendChild(timestampEl);
+
 
             // Admin-spezifische Elemente und Buttons
             if (ADMIN_UIDS.includes(currentUserId)) {
@@ -833,12 +893,12 @@
                     const newStatus = e.target.value;
                     showModal(
                         `Möchtest du den Status für ${order.customerName}'s Bestellung wirklich auf "${newStatus}" ändern?`,
-                        () => updateOrderStatus(orderId, newStatus)
+                        () => updateOrderStatus(orderId, order.status, newStatus, order.itemPrice, order.quantity, order.tipAmount) // Alte Status-Info übergeben
                     );
                 });
                 adminControlsDiv.appendChild(statusChangeSelect);
 
-                // NEU: Notizfeld für Admins
+                // Notizfeld für Admins
                 const notesDiv = document.createElement('div');
                 notesDiv.className = 'flex flex-col gap-1';
                 const notesLabel = document.createElement('label');
@@ -879,7 +939,14 @@
                 deleteButton.onclick = () => {
                     showModal(
                         `Möchtest du die Bestellung von ${order.customerName} wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.`,
-                        () => deleteOrder(orderId)
+                        async () => {
+                            // Bevor die Bestellung gelöscht wird, die Finanzübersicht anpassen
+                            // Hier prüfen wir den Status der Bestellung, die GELÖSCHT wird.
+                            if (order.status === 'bezahlt') {
+                                await updateFinancialSummary(orderId, 'bezahlt', 'storniert', order.itemPrice, order.quantity, order.tipAmount);
+                            }
+                            await deleteOrder(orderId);
+                        }
                     );
                 };
                 adminControlsDiv.appendChild(deleteButton);
@@ -890,7 +957,7 @@
         }
 
         // Funktion zum Aktualisieren des Bestellstatus
-        async function updateOrderStatus(orderId, newStatus) {
+        async function updateOrderStatus(orderId, oldStatus, newStatus, itemPrice, quantity, tipAmount) {
             if (!ordersCollection) {
                 console.error("Orders collection is not initialized.");
                 return;
@@ -902,6 +969,10 @@
                     lastUpdated: serverTimestamp()
                 });
                 console.log(`Order ${orderId} status updated to: ${newStatus}`);
+                
+                // NEU: Finanzübersicht aktualisieren, wenn Status bezahlt wird oder von bezahlt wechselt
+                await updateFinancialSummary(orderId, oldStatus, newStatus, itemPrice, quantity, tipAmount);
+
             } catch (error) {
                 console.error("Error updating order status: ", error);
                 showModal(`Fehler beim Aktualisieren des Bestellstatus: ${error.message}`, () => {});
@@ -925,7 +996,7 @@
             }
         }
 
-        // Funktion zum Anzeigen der Hofer-Benachrichtigung
+        // Funktion zum Anzeigen der Hofer-Benachrichtigung (In-Webseiten-Pop-up)
         function showHoferNotification(message, isInitiator = false) {
             if (localStorage.getItem('dismissedHoferTrip') === 'true' && !isInitiator) {
                 return;
@@ -945,28 +1016,34 @@
             endHoferTripButton.classList.add('hidden');
         }
 
-        // --- KEINE Push Notification Logik mehr hier ---
-        // Die Funktionen requestNotificationPermissionAndGetToken, saveDeviceTokenToFirestore,
-        // deleteDeviceTokenFromFirestore, updateNotificationButtons, onMessage wurden entfernt.
-
-
         // --- Admin Dashboard Logik ---
         async function updateAdminDashboard(orders) {
             const openOrdersCount = orders.filter(o => o.status === 'offen').length;
-            const totalRevenue = calculateTotalRevenue(orders);
+            const totalRevenuePaidOrders = calculateTotalRevenueFromPaidOrders(orders); // Gesamtumsatz der bezahlten Bestellungen (enthält auch itemPrice)
+            const financialSummaryDoc = await getDoc(doc(financialSummaryCollection, 'overall')); // NEU: Finanz-Summary laden
+            const currentFinancials = financialSummaryDoc.exists ? financialSummaryDoc.data() : { totalCollectedRevenue: 0, totalProductExpenses: 0 };
+            
+            const totalCollectedRevenue = currentFinancials.totalCollectedRevenue || 0;
+            const totalProductExpenses = currentFinancials.totalProductExpenses || 0;
+            const totalProfit = totalCollectedRevenue - totalProductExpenses; // NEU: Gewinnberechnung
+
             const topItemsHtml = renderTopItems(orders);
-            const aggregatedShoppingListHtml = renderAggregatedShoppingList(orders); // NEU
+            const aggregatedShoppingListHtml = renderAggregatedShoppingList(orders);
 
             const dashboardContent = `
                 <h3 class="text-xl font-semibold mb-4 text-gray-700">Übersicht</h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div class="bg-blue-100 p-4 rounded-lg shadow-sm">
                         <p class="text-sm text-blue-700">Offene Bestellungen:</p>
                         <p class="text-2xl font-bold text-blue-800">${openOrdersCount}</p>
                     </div>
                     <div class="bg-green-100 p-4 rounded-lg shadow-sm">
-                        <p class="text-sm text-green-700">Gesamtumsatz (bezahlt):</p>
-                        <p class="text-2xl font-bold text-green-800">${totalRevenue.toFixed(2).replace('.', ',')} €</p>
+                        <p class="text-sm text-green-700">Gesamtumsatz (Produkte + Liefergebühr + Trinkgeld - bezahlt):</p>
+                        <p class="text-2xl font-bold text-green-800">${totalRevenuePaidOrders.toFixed(2).replace('.', ',')} €</p>
+                    </div>
+                    <div class="bg-purple-100 p-4 rounded-lg shadow-sm">
+                        <p class="text-sm text-purple-700">Gesamtgewinn (Liefergebühr + Trinkgeld - Produktkosten):</p>
+                        <p class="text-2xl font-bold text-purple-800">${totalProfit.toFixed(2).replace('.', ',')} €</p>
                     </div>
                 </div>
                 <h3 class="text-xl font-semibold mt-6 mb-4 text-gray-700">Top Bestellungen (Aktuell)</h3>
@@ -981,23 +1058,24 @@
             tabContentDiv.innerHTML = dashboardContent;
         }
 
-        function calculateTotalRevenue(orders) {
+        // Berechnung des Umsatzes aus bezahlten Bestellungen (Produkte + Gebühr + Trinkgeld)
+        function calculateTotalRevenueFromPaidOrders(orders) {
             return orders.filter(o => o.status === 'bezahlt').reduce((sum, order) => {
-                return sum + ((order.itemPrice || 0) * (order.quantity || 1)) + DELIVERY_FEE;
+                return sum + ((order.itemPrice || 0) * (order.quantity || 1)) + DELIVERY_FEE + (order.tipAmount || 0);
             }, 0);
         }
 
         function renderTopItems(orders) {
             const itemCounts = {};
             orders.forEach(order => {
-                const itemName = order.orderDetails; // Verwenden wir orderDetails als Item-Namen
+                const itemName = order.orderDetails;
                 const quantity = order.quantity || 1;
                 itemCounts[itemName] = (itemCounts[itemName] || 0) + quantity;
             });
 
             const sortedItems = Object.entries(itemCounts)
                 .sort(([, countA], [, countB]) => countB - countA)
-                .slice(0, 5); // Top 5
+                .slice(0, 5);
 
             if (sortedItems.length === 0) return '<p class="text-gray-500">Noch keine Top-Artikel.</p>';
 
@@ -1009,7 +1087,6 @@
             `).join('');
         }
         
-        // NEU: Aggregierte Einkaufsliste
         function renderAggregatedShoppingList(orders) {
             const shoppingList = {};
             orders.filter(o => o.status === 'offen').forEach(order => {
@@ -1060,6 +1137,7 @@
             `;
             tabContentDiv.innerHTML = productsHtml;
 
+            // DOM-Elemente innerhalb des gerenderten HTML neu abrufen
             const productNameInput = document.getElementById('productNameInput');
             const productPriceInput = document.getElementById('productPriceInput');
             const productOrderInput = document.getElementById('productOrderInput');
@@ -1112,7 +1190,6 @@
                                 try {
                                     await deleteDoc(doc(productsCollection, productId));
                                     showModal('Produkt erfolgreich gelöscht.', () => {});
-                                    // loadProducts() wird durch onSnapshot getriggert, aktualisiert auch das Dropdown
                                 } catch (error) {
                                     console.error("Error deleting product:", error);
                                     showModal(`Fehler beim Löschen des Produkts: ${error.message}`, () => {});
@@ -1153,7 +1230,6 @@
                     editingProductId = null;
                     saveProductButton.textContent = 'Produkt speichern';
                     cancelProductEditButton.classList.add('hidden');
-                    // loadProducts() wird durch onSnapshot getriggert, aktualisiert auch das Dropdown
                 } catch (error) {
                     console.error("Error saving product:", error);
                     showModal(`Fehler beim Speichern des Produkts: ${error.message}`, () => {});
@@ -1173,9 +1249,42 @@
 
 
         // --- Event Listeners ---
-        submitOrderButton.addEventListener('click', addOrder);
+        // submitOrderButton triggert jetzt das Trinkgeld-Modal
+        submitOrderButton.addEventListener('click', () => {
+            const name = customerNameInput.value.trim();
+            const classroom = classroomInput.value.trim();
+            let details;
+            let itemPrice;
+            const quantity = parseInt(itemQuantityInput.value) || 1;
+
+            const selectedIndex = popularItemSelect.value;
+            const selectedItem = POPULAR_ITEMS[selectedIndex];
+
+            if (selectedItem && !selectedItem.isPlaceholder) {
+                if (selectedItem.isOther) {
+                    details = orderDetailsInput.value.trim();
+                    itemPrice = parseFloat(itemPriceInput.value);
+                } else {
+                    details = selectedItem.name;
+                    itemPrice = selectedItem.price;
+                }
+            } else {
+                details = orderDetailsInput.value.trim();
+                itemPrice = parseFloat(itemPriceInput.value);
+            }
+
+            // Grundlegende Validierung vor dem Trinkgeld-Modal
+            if (!name) { showModal("Bitte gib deinen Namen ein.", () => {}); return; }
+            if (!details) { showModal("Bitte gib die Details deiner Bestellung ein.", () => {}); return; }
+            if (isNaN(itemPrice) || itemPrice < 0) { showModal("Bitte gib einen gültigen Preis für den Artikel ein (z.B. 1.50).", () => {}); return; }
+            if (isNaN(quantity) || quantity < 1) { showModal("Bitte gib eine gültige Menge (mind. 1) ein.", () => {}); return; }
+
+            // Speichere die aktuellen Bestelldaten temporär
+            pendingOrderData = { name, classroom, details, itemPrice, quantity };
+            showTipModal(); // Zeige das Trinkgeld-Modal
+        });
+
         popularItemSelect.addEventListener('change', handlePopularItemSelection);
-        // document.addEventListener('DOMContentLoaded', populatePopularItemsDropdown); // Wird jetzt in onAuthStateChanged nach loadProducts aufgerufen
 
         // Event Listener für Schnell-Nachbestellung
         reorderLastOrderButton.addEventListener('click', async () => {
@@ -1185,22 +1294,22 @@
                 const docSnap = await getDoc(userProfileRef);
                 if (docSnap.exists() && docSnap.data().lastOrderDetails) {
                     const lastOrder = docSnap.data().lastOrderDetails;
-                    customerNameInput.value = (await getDoc(doc(db, userProfilesCollection, currentUserId))).data().customerName || ''; // Name evtl. speichern
-                    classroomInput.value = lastOrder.classroom || ''; // NEU: Klassenzimmer laden
+                    // Der Name des Kunden wird nicht in lastOrderDetails gespeichert, da er vom customerNameInput kommt
+                    customerNameInput.value = lastOrder.customerName || ''; // Falls du Namen auch in userProfile speichern möchtest
+                    classroomInput.value = lastOrder.classroom || '';
                     orderDetailsInput.value = lastOrder.orderDetails;
                     itemPriceInput.value = lastOrder.itemPrice.toFixed(2);
                     itemQuantityInput.value = lastOrder.quantity;
 
-                    // Versuche, das Dropdown passend einzustellen, falls das Produkt in POPULAR_ITEMS ist
                     const matchingProductIndex = POPULAR_ITEMS.findIndex(
                         p => p.name === lastOrder.orderDetails && p.price.toFixed(2) === lastOrder.itemPrice.toFixed(2)
                     );
                     if (matchingProductIndex !== -1) {
                         popularItemSelect.value = matchingProductIndex;
-                        handlePopularItemSelection(); // Setzt Felder und versteckt "Sonstiges"
+                        handlePopularItemSelection();
                     } else {
-                        popularItemSelect.value = POPULAR_ITEMS.findIndex(p => p.isOther); // Wähle "Sonstiges"
-                        handlePopularItemSelection(); // Zeigt Felder an
+                        popularItemSelect.value = POPULAR_ITEMS.findIndex(p => p.isOther);
+                        handlePopularItemSelection();
                     }
                     showModal('Letzte Bestellung ins Formular geladen. Bitte überprüfen und abschicken!', () => {});
                 } else {
@@ -1293,18 +1402,15 @@
             console.error("Error listening to Hofer status:", error);
         });
 
-        // KEINE Event Listener für Benachrichtigungs-Buttons mehr
-
-
         // Event Listener für Filter- und Sortier-Dropdowns
         statusFilterSelect.addEventListener('change', (e) => {
             currentStatusFilter = e.target.value;
-            loadOrders(); // Bestellungen neu laden mit neuem Filter
+            loadOrders();
         });
 
         sortOrderSelect.addEventListener('change', (e) => {
             currentSortOrder = e.target.value;
-            loadOrders(); // Bestellungen neu laden mit neuer Sortierung
+            loadOrders();
         });
 
         // Admin Tab Navigation
@@ -1313,18 +1419,31 @@
             productsTabButton.classList.remove('active');
             dashboardTabButton.classList.remove('active');
             
-            // Inhalt leeren und benötigte Sektionen anhängen
-            tabContentDiv.innerHTML = '';
-            tabContentDiv.appendChild(orderFormSection);
-            tabContentDiv.appendChild(ordersFilterSortSection);
-            tabContentDiv.appendChild(ordersListSection);
+            tabContentDiv.innerHTML = ''; // Vorherigen Tab-Inhalt löschen
+
+            // Sicherstellen, dass die Elemente im DOM existieren und dann anhängen
+            // Das ist wichtig, da innerHTML = '' die Elemente aus dem DOM entfernt.
+            // Wir müssen sie aus der originalen HTML-Struktur "entfernen" und in den Tab Content verschieben.
+            // Zuerst sicherstellen, dass sie nicht schon an anderer Stelle im tabContentDiv sind
+            // und sie dann von ihrem "Originalplatz" im Body abhängen, falls nötig
+            const originalParent = document.body.querySelector('div.bg-white.shadow-2xl');
+            
+            if (orderFormSection.parentNode !== tabContentDiv) {
+                tabContentDiv.appendChild(orderFormSection);
+            }
+            if (ordersFilterSortSection.parentNode !== tabContentDiv) {
+                tabContentDiv.appendChild(ordersFilterSortSection);
+            }
+            if (ordersListSection.parentNode !== tabContentDiv) {
+                tabContentDiv.appendChild(ordersListSection);
+            }
 
             // Sektionen sichtbar machen
             orderFormSection.style.display = 'block';
             ordersFilterSortSection.style.display = 'block';
             ordersListSection.style.display = 'block';
             
-            loadOrders(); // Bestellungen aktualisieren
+            loadOrders();
         });
 
         productsTabButton.addEventListener('click', () => {
@@ -1337,7 +1456,7 @@
             ordersFilterSortSection.style.display = 'none';
             ordersListSection.style.display = 'none';
             
-            renderProductManagement(); // Produktverwaltung rendern
+            renderProductManagement();
         });
 
         dashboardTabButton.addEventListener('click', () => {
@@ -1350,8 +1469,7 @@
             ordersFilterSortSection.style.display = 'none';
             ordersListSection.style.display = 'none';
             
-            // Dashboard-Inhalt wird in loadOrders() aktualisiert, die dann getriggert wird
-            loadOrders(); 
+            loadOrders(); // Löst updateAdminDashboard aus
         });
     </script>
 </body>
