@@ -120,10 +120,8 @@
         <!-- Bestellungsformular (standardmäßig sichtbar, für Nicht-Admins immer da, für Admins im Tab) -->
         <section id="order-form-section" class="mb-8">
             <h2 class="text-2xl font-semibold mb-4 text-gray-700">Neue Bestellung aufgeben:</h2>
-            <!-- Nächste Lieferzeit Hinweis -->
-            <div class="bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-3 mb-4 rounded-md">
-                <p class="font-medium">Nächste Lieferung: ca. 12:30 Uhr (Bestellen bis 12:20 Uhr!)</p>
-            </div>
+            <!-- HIER WURDE DER HINWEIS "Nächste Lieferung" ENTFERNT -->
+            
             <div class="space-y-4">
                 <div>
                     <label for="customerName" class="block text-sm font-medium text-gray-700">Dein Name:</label>
@@ -165,12 +163,32 @@
                         <textarea id="orderDetails" name="orderDetails" rows="3" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="z.B. 1x Cola, 2x Mannerschnitten"></textarea>
                     </div>
                     <div>
-                        <label for="itemPrice" class="block text-sm font-medium text-gray-700">Preis des Artikels (€):</label>
+                        <label for="itemPrice" class="block text-sm font-medium text-gray-700">Preis des Artikels (pro Stück in €):</label>
                         <input type="number" id="itemPrice" name="itemPrice" step="0.01" min="0" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="z.B. 1.50">
                     </div>
                 </div>
+
+                <!-- Neuer Button zum Hinzufügen von Artikeln zum Warenkorb -->
+                <button id="addItemToCart" class="w-full bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2.5 px-4 rounded-lg shadow-md transition duration-150 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50">
+                    Artikel zur Bestellung hinzufügen
+                </button>
+
+                <div id="cartSection" class="mt-6 p-4 border border-gray-300 rounded-lg bg-gray-50 hidden">
+                    <h3 class="text-lg font-semibold mb-3 text-gray-700">Deine aktuelle Bestellung:</h3>
+                    <div id="cartItemsContainer" class="space-y-2">
+                        <!-- Warenkorb-Artikel werden hier eingefügt -->
+                    </div>
+                    <div class="mt-4 pt-3 border-t border-gray-200 flex justify-between items-center">
+                        <p class="font-bold text-gray-800">Gesamt Artikelpreis:</p>
+                        <p id="cartTotalPrice" class="font-bold text-xl text-indigo-700">0,00 €</p>
+                    </div>
+                    <button id="clearCartButton" class="w-full bg-red-400 hover:bg-red-500 text-white font-bold py-2 px-4 rounded-lg shadow-md transition duration-150 ease-in-out mt-4">
+                        Bestellung löschen
+                    </button>
+                </div>
                 
-                <button id="submitOrder" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg shadow-md transition duration-150 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50">
+                <!-- Der ursprüngliche Submit-Button wird zur Finalisierung des Warenkorbs -->
+                <button id="submitOrder" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg shadow-md transition duration-150 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50 mt-4">
                     Bestellung abschicken
                 </button>
             </div>
@@ -283,7 +301,7 @@
             messagingSenderId: "1040028718739",
             // BITTE DIESE APP_ID DURCH DEINE ECHTE APP_ID ERSETZEN!
             // Wenn diese App-ID nicht stimmt, funktionieren die Firestore-Pfade nicht!
-            appId: "1:1040028718739:web:1d70d11875d75cc195df66",
+            appId: "1:1040028718739:web:1d70d11875d75cc195df66", // <--- HIER DEINE ECHTE APP_ID EINTRAGEN
             measurementId: "G-Y06HR8YKHC"
         };
 
@@ -297,11 +315,12 @@
         let financialSummaryCollection; // Financial Summary Collection
 
         // DEFINIERE ALLE PFADE HIER VORHER
-        let ordersCollectionPath = `artifacts/${firebaseConfig.appId}/public/data/lieferdienstNellOrders`;
-        let productsCollectionPath = `artifacts/${firebaseConfig.appId}/public/data/products`;
-        let userProfilesCollectionPath = `artifacts/${firebaseConfig.appId}/users`;
-        let financialSummaryDocPath = `artifacts/${firebaseConfig.appId}/public/data/financialSummary/overall`; // Pfad zum Finanz-Summary-Dokument
-        let hoferStatusDocPath = `artifacts/${firebaseConfig.appId}/public/data/hoferStatus/status`; // Korrigierter Pfad
+        const APP_ID = firebaseConfig.appId; // Verwende eine Konstante für die App ID
+        let ordersCollectionPath = `artifacts/${APP_ID}/public/data/lieferdienstNellOrders`;
+        let productsCollectionPath = `artifacts/${APP_ID}/public/data/products`;
+        let userProfilesCollectionPath = `artifacts/${APP_ID}/users`;
+        let financialSummaryDocPath = `artifacts/${APP_ID}/public/data/financialSummary/overall`; // Pfad zum Finanz-Summary-Dokument
+        let hoferStatusDocPath = `artifacts/${APP_ID}/public/data/hoferStatus/status`; // Korrigierter Pfad
 
         let hoferStatusDocRef; // Firestore DocumentReference
 
@@ -321,6 +340,9 @@
         let currentStatusFilter = 'all';
         let currentSortOrder = 'createdAt_desc';
 
+        // Warenkorb-Logik: Array für die aktuell zur Bestellung hinzugefügten Artikel
+        let currentOrderItems = []; // [{ name: "Cola", unitPrice: 1.50, quantity: 2 }, ...]
+
 
         try {
             app = initializeApp(firebaseConfig);
@@ -332,8 +354,8 @@
             ordersCollection = collection(db, ordersCollectionPath);
             productsCollection = collection(db, productsCollectionPath);
             userProfilesCollection = collection(db, userProfilesCollectionPath);
-            financialSummaryCollection = collection(db, `artifacts/${firebaseConfig.appId}/public/data/financialSummary`);
-            hoferStatusDocRef = doc(db, hoferStatusDocPath); // Jetzt ist hoferStatusDocPath definiert
+            financialSummaryCollection = collection(db, `artifacts/${APP_ID}/public/data/financialSummary`);
+            hoferStatusDocRef = doc(db, hoferStatusDocPath);
 
             // Debugging: Logge die Pfade, um zu sehen, ob sie korrekt sind
             console.log("Firestore Orders Collection Path:", ordersCollectionPath);
@@ -358,10 +380,11 @@
         // --- DOM Elements ---
         const customerNameInput = document.getElementById('customerName');
         const classroomInput = document.getElementById('classroom');
-        const orderDetailsInput = document.getElementById('orderDetails');
-        const itemPriceInput = document.getElementById('itemPrice');
-        const itemQuantityInput = document.getElementById('itemQuantity');
-        const submitOrderButton = document.getElementById('submitOrder');
+        const orderDetailsInput = document.getElementById('orderDetails'); // Jetzt für Warenkorb-Einzeleingabe
+        const itemPriceInput = document.getElementById('itemPrice');       // Jetzt für Warenkorb-Einzeleingabe
+        const itemQuantityInput = document.getElementById('itemQuantity'); // Jetzt für Warenkorb-Einzeleingabe
+        const addItemToCartButton = document.getElementById('addItemToCart'); // NEU: Zum Hinzufügen von Artikeln
+        const submitOrderButton = document.getElementById('submitOrder'); // Jetzt für Warenkorb-Abschluss
         const ordersContainer = document.getElementById('ordersContainer');
         const userIdDisplay = document.getElementById('userIdDisplay');
         const loadingOrdersDiv = document.getElementById('loadingOrders');
@@ -402,6 +425,11 @@
         const lastOrderDisplay = document.getElementById('lastOrderDisplay');
         const reorderLastOrderButton = document.getElementById('reorderLastOrder');
 
+        // NEU: Warenkorb-Elemente
+        const cartSection = document.getElementById('cartSection');
+        const cartItemsContainer = document.getElementById('cartItemsContainer');
+        const cartTotalPriceDisplay = document.getElementById('cartTotalPrice');
+        const clearCartButton = document.getElementById('clearCartButton');
 
         // Modal elements (general confirmation)
         const confirmationModal = document.getElementById('confirmationModal');
@@ -417,7 +445,7 @@
         let selectedTipAmount = 0.00; // Standardwert
 
         // Temporäre Daten für Bestellung, bevor Trinkgeld gewählt wird
-        let pendingOrderData = {};
+        let pendingOrderData = {}; // Wird jetzt ein Objekt mit allen Warenkorb-Daten sein
 
 
         // --- Authentication ---
@@ -427,21 +455,12 @@
                 userIdDisplay.textContent = currentUserId;
                 console.log("User is signed in with UID:", currentUserId);
                 
-                // Stelle sicher, dass ordersCollection und productsCollection initialisiert sind, bevor sie verwendet werden.
-                // Dies sollte durch den try-Block oben geschehen sein, aber eine erneute Prüfung schadet nicht.
-                if (!ordersCollection || !productsCollection) {
-                    console.error("Firebase collections not fully initialized after auth. Retrying...");
-                    // Optional: Kurze Verzögerung und erneuter Versuch, falls ein seltener Race-Condition vorliegt.
-                    // Für jetzt lassen wir es einfach und prüfen, ob die oben genannten Schritte ausreichen.
-                }
-
                 await loadProducts(); // Produkte laden, sobald authentifiziert
                 loadOrders(); // Bestellungen laden, sobald authentifiziert
                 loadUserProfile(); // User-Profil laden
 
                 if (ADMIN_UIDS.includes(currentUserId)) {
                     adminTabsDiv.classList.remove('hidden');
-                    // Sicherstellen, dass ordersTabButton existiert, bevor click() aufgerufen wird
                     if (ordersTabButton) {
                         ordersTabButton.click(); // Initial den Orders Tab aktivieren
                     }
@@ -501,11 +520,26 @@
                 return;
             }
 
-            const userProfileRef = doc(db, userProfilesCollectionPath, currentUserId); // Verwende den korrekten Pfad
+            const userProfileRef = doc(db, userProfilesCollectionPath, currentUserId);
             onSnapshot(userProfileRef, (docSnapshot) => {
                 if (docSnapshot.exists() && docSnapshot.data().lastOrderDetails) {
                     const lastOrder = docSnapshot.data().lastOrderDetails;
-                    lastOrderDisplay.textContent = `${lastOrder.quantity}x ${lastOrder.orderDetails} (${((lastOrder.itemPrice || 0) * (lastOrder.quantity || 1)).toFixed(2).replace('.', ',')}€)`;
+                    // lastOrderDetails ist jetzt ein Array von Items + Gesamtpreis
+                    let lastOrderDisplayHtml = '';
+                    let totalItemsCount = 0;
+                    if (lastOrder.items && Array.isArray(lastOrder.items)) {
+                        lastOrder.items.forEach(item => {
+                            lastOrderDisplayHtml += `${item.quantity}x ${item.name}; `;
+                            totalItemsCount += item.quantity;
+                        });
+                        lastOrderDisplayHtml = lastOrderDisplayHtml.trim().replace(/;$/, ''); // Letztes Semikolon entfernen
+                    } else {
+                        // Fallback für alte, Einzel-Bestellungen
+                        lastOrderDisplayHtml = `${lastOrder.quantity}x ${lastOrder.orderDetails}`;
+                        totalItemsCount = lastOrder.quantity || 0;
+                    }
+                    
+                    lastOrderDisplay.textContent = `${lastOrderDisplayHtml} (${totalItemsCount} Artikel, ${lastOrder.totalProductCost.toFixed(2).replace('.', ',')}€)`;
                     lastOrderSection.classList.remove('hidden');
                 } else {
                     lastOrderSection.classList.add('hidden');
@@ -516,19 +550,19 @@
         }
 
         // Funktion zum Speichern der letzten Bestellung im Benutzerprofil
-        async function saveLastOrderToProfile(orderDetails, itemPrice, quantity, classroom) {
+        async function saveLastOrderToProfile(customerName, classroom, items, totalProductCost) {
             if (!currentUserId) {
                 console.log("No currentUserId for saveLastOrderToProfile.");
                 return;
             }
-            const userProfileRef = doc(db, userProfilesCollectionPath, currentUserId); // Verwende den korrekten Pfad
+            const userProfileRef = doc(db, userProfilesCollectionPath, currentUserId);
             try {
                 await setDoc(userProfileRef, {
                     lastOrderDetails: {
-                        orderDetails,
-                        itemPrice,
-                        quantity,
-                        classroom
+                        customerName: customerName, // Name des Kunden, falls dieser in der Nachbestellung verwendet werden soll
+                        classroom: classroom,
+                        items: items, // Speichere das ganze Array
+                        totalProductCost: totalProductCost
                     },
                     lastOrderTimestamp: serverTimestamp()
                 }, { merge: true });
@@ -591,23 +625,67 @@
 
             if (selectedItem.isOther) {
                 otherItemInputsDiv.classList.remove('hidden');
-                itemPriceInput.value = '';
-                orderDetailsInput.value = '';
+                itemPriceInput.value = ''; // Preis für "Sonstiges" leeren
+                orderDetailsInput.value = ''; // Details für "Sonstiges" leeren
                 quantityInputDiv.classList.remove('hidden');
                 itemQuantityInput.value = 1;
             } else if (selectedItem.isPlaceholder) {
                 otherItemInputsDiv.classList.add('hidden');
                 orderDetailsInput.value = '';
                 itemPriceInput.value = '';
-                quantityInputDiv.classList.add('hidden');
+                quantityInputDiv.classList.add('hidden'); // Menge verstecken, bis Produkt ausgewählt
                 itemQuantityInput.value = 1;
             } else {
                 otherItemInputsDiv.classList.add('hidden');
-                orderDetailsInput.value = selectedItem.name;
-                itemPriceInput.value = selectedItem.price.toFixed(2);
+                orderDetailsInput.value = selectedItem.name; // Produktname als Detail vorausfüllen
+                itemPriceInput.value = selectedItem.price.toFixed(2); // Preis vorausfüllen
                 quantityInputDiv.classList.remove('hidden');
                 itemQuantityInput.value = 1;
             }
+        }
+
+        // Funktion zum Aktualisieren der Warenkorbanzeige
+        function updateCartDisplay() {
+            cartItemsContainer.innerHTML = '';
+            let totalProductCost = 0;
+
+            if (currentOrderItems.length === 0) {
+                cartSection.classList.add('hidden');
+                cartTotalPriceDisplay.textContent = '0,00 €';
+                return;
+            }
+
+            cartSection.classList.remove('hidden');
+            currentOrderItems.forEach((item, index) => {
+                const itemTotal = item.unitPrice * item.quantity;
+                totalProductCost += itemTotal;
+
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'flex justify-between items-center bg-white p-2 rounded-md shadow-sm';
+                itemDiv.innerHTML = `
+                    <span class="text-gray-700">${item.quantity}x ${item.name}</span>
+                    <div class="flex items-center">
+                        <span class="font-semibold text-gray-800 mr-2">${itemTotal.toFixed(2).replace('.', ',')}€</span>
+                        <button class="remove-from-cart-btn bg-red-200 hover:bg-red-300 text-red-800 text-xs font-bold p-1 rounded-full" data-index="${index}">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+                `;
+                cartItemsContainer.appendChild(itemDiv);
+            });
+
+            cartTotalPriceDisplay.textContent = `${totalProductCost.toFixed(2).replace('.', ',')} €`;
+
+            // Event Listener für "Artikel entfernen" Buttons
+            document.querySelectorAll('.remove-from-cart-btn').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const indexToRemove = parseInt(e.currentTarget.dataset.index);
+                    currentOrderItems.splice(indexToRemove, 1);
+                    updateCartDisplay();
+                });
+            });
         }
 
 
@@ -671,12 +749,12 @@
         confirmTipButton.addEventListener('click', () => {
             hideTipModal();
             // Jetzt die Bestellung abschicken mit dem gewählten Trinkgeld
-            proceedAddOrder(pendingOrderData.name, pendingOrderData.classroom, pendingOrderData.details, pendingOrderData.itemPrice, pendingOrderData.quantity, selectedTipAmount);
+            proceedAddOrder(pendingOrderData.customerName, pendingOrderData.classroom, pendingOrderData.items, pendingOrderData.totalProductCost, selectedTipAmount);
         });
 
 
         // Add new order (Diese Funktion wird jetzt durch das Trinkgeld-Modal getriggert)
-        async function proceedAddOrder(name, classroom, details, itemPrice, quantity, tipAmount) {
+        async function proceedAddOrder(customerName, classroom, items, totalProductCost, tipAmount) {
             if (!ordersCollection) {
                 console.error("Orders collection is not initialized. Cannot add order.");
                 showModal("Fehler: Datenbankverbindung nicht bereit. Versuche die Seite neu zu laden.", () => {});
@@ -685,11 +763,10 @@
 
             try {
                 const docRef = await addDoc(ordersCollection, {
-                    customerName: name,
+                    customerName: customerName,
                     classroom: classroom,
-                    orderDetails: details,
-                    itemPrice: itemPrice,
-                    quantity: quantity,
+                    items: items, // Das Array der Artikel
+                    totalProductCost: totalProductCost, // Gesamtpreis der Artikel
                     tipAmount: tipAmount,
                     status: 'offen',
                     createdAt: serverTimestamp(),
@@ -698,16 +775,17 @@
                 });
                 console.log("Order added successfully with ID:", docRef.id);
 
+                // Formular und Warenkorb zurücksetzen
                 customerNameInput.value = '';
                 classroomInput.value = '';
-                orderDetailsInput.value = '';
-                itemPriceInput.value = '';
-                itemQuantityInput.value = 1;
                 popularItemSelect.value = 0;
-                handlePopularItemSelection();
+                handlePopularItemSelection(); // Setzt Details und Preis zurück
+                itemQuantityInput.value = 1;
+                currentOrderItems = []; // Warenkorb leeren
+                updateCartDisplay(); // Warenkorb-Anzeige aktualisieren
 
                 // Letzte Bestellung im User-Profil speichern (ohne Trinkgeld, nur Details)
-                await saveLastOrderToProfile(details, itemPrice, quantity, classroom);
+                await saveLastOrderToProfile(customerName, classroom, items, totalProductCost);
 
             } catch (error) {
                 console.error("Error adding order: ", error);
@@ -716,7 +794,7 @@
         }
 
         // Funktion zur Aktualisierung der Finanzübersicht
-        async function updateFinancialSummary(orderId, oldStatus, newStatus, itemPrice, quantity, tipAmount) {
+        async function updateFinancialSummary(orderId, oldStatus, newStatus, totalProductCost, tipAmount) {
             const financialDocRef = doc(financialSummaryCollection, 'overall');
 
             try {
@@ -725,24 +803,19 @@
                     let totalCollectedRevenue = sfDoc.exists ? sfDoc.data().totalCollectedRevenue || 0 : 0;
                     let totalProductExpenses = sfDoc.exists ? sfDoc.data().totalProductExpenses || 0 : 0;
 
-                    const currentItemCost = (itemPrice || 0) * (quantity || 1);
                     const currentRevenueFromOrder = DELIVERY_FEE + (tipAmount || 0);
 
                     // Effektive Finanzwerte der Bestellung
                     let effectiveRevenueChange = 0;
                     let effectiveExpenseChange = 0;
 
-                    // Logik: Nur wenn der Statuswechsel eine Änderung der Finanzwerte bedeutet
-                    // Beispiel: Wechsel von 'offen' zu 'bezahlt' -> addiere, von 'bezahlt' zu 'storniert' -> subtrahiere
                     if (oldStatus !== 'bezahlt' && newStatus === 'bezahlt') {
                         effectiveRevenueChange = currentRevenueFromOrder;
-                        effectiveExpenseChange = currentItemCost;
+                        effectiveExpenseChange = totalProductCost; // Hier totalProductCost verwenden
                     } else if (oldStatus === 'bezahlt' && newStatus !== 'bezahlt') {
                         effectiveRevenueChange = -currentRevenueFromOrder;
-                        effectiveExpenseChange = -currentItemCost;
+                        effectiveExpenseChange = -totalProductCost; // Hier totalProductCost verwenden
                     }
-                    // Wenn der Status von bezahlt zu bezahlt geändert wird (z.B. nur Notizen), keine Änderung
-                    // Wenn der Status von offen zu offen geändert wird, keine Änderung
 
                     totalCollectedRevenue += effectiveRevenueChange;
                     totalProductExpenses += effectiveExpenseChange;
@@ -769,7 +842,6 @@
                 return;
             }
 
-            // Stelle sicher, dass der Lade-Text angezeigt wird, bis Daten da sind
             loadingOrdersDiv.classList.remove('hidden');
             noOrdersDiv.classList.add('hidden');
             ordersContainer.innerHTML = '';
@@ -784,7 +856,6 @@
             const [sortField, sortDirection] = currentSortOrder.split('_');
             if (sortField === 'totalPrice') {
                  console.warn("Client-seitige Sortierung nach Gesamtpreis ist aktiv.");
-                 // Keine Firestore orderBy hier, da wir später client-seitig sortieren
             } else if (sortField === 'customerName') {
                  q = query(q, orderBy('customerName', sortDirection));
             } else if (sortField === 'createdAt') {
@@ -805,8 +876,9 @@
                 // Client-seitige Sortierung für Gesamtpreis
                 if (sortField === 'totalPrice') {
                     orders.sort((a, b) => {
-                        const priceA = (a.itemPrice || 0) * (a.quantity || 1) + DELIVERY_FEE + (a.tipAmount || 0);
-                        const priceB = (b.itemPrice || 0) * (b.quantity || 1) + DELIVERY_FEE + (b.tipAmount || 0);
+                        // Berechnung des Gesamtpreises für neue und alte Schemata
+                        let priceA = (a.totalProductCost || ((a.itemPrice || 0) * (a.quantity || 1))) + DELIVERY_FEE + (a.tipAmount || 0);
+                        let priceB = (b.totalProductCost || ((b.itemPrice || 0) * (b.quantity || 1))) + DELIVERY_FEE + (b.tipAmount || 0);
                         return sortDirection === 'asc' ? priceA - priceB : priceB - priceA;
                     });
                 }
@@ -822,7 +894,6 @@
                     });
                 }
                 // Dashboard nur aktualisieren, wenn Dashboard-Tab aktiv ist
-                // Wichtig: currentUserId muss hier gesetzt sein, was durch onAuthStateChanged gewährleistet ist
                 if (ADMIN_UIDS.includes(currentUserId) && dashboardTabButton.classList.contains('active')) {
                     updateAdminDashboard(orders);
                 }
@@ -853,14 +924,24 @@
 
             const detailsEl = document.createElement('p');
             detailsEl.className = 'text-gray-700 my-1';
-            detailsEl.textContent = `${order.quantity}x ${order.orderDetails}`;
+
+            let totalProductCost = 0;
+            if (order.items && Array.isArray(order.items)) {
+                // Neues Schema: mehrere Artikel
+                let itemSummary = order.items.map(item => `${item.quantity}x ${item.name}`).join(', ');
+                detailsEl.textContent = itemSummary;
+                totalProductCost = order.items.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
+            } else {
+                // Altes Schema: einzelner Artikel
+                detailsEl.textContent = `${order.quantity}x ${order.orderDetails}`;
+                totalProductCost = (order.itemPrice || 0) * (order.quantity || 1);
+            }
             orderDiv.appendChild(detailsEl);
 
 
             const itemPriceEl = document.createElement('p');
             itemPriceEl.className = 'text-sm text-gray-600';
-            const formattedItemPrice = ((order.itemPrice || 0) * (order.quantity || 1)).toFixed(2).replace('.', ',');
-            itemPriceEl.textContent = `Artikelpreis: ${formattedItemPrice} €`;
+            itemPriceEl.textContent = `Artikelpreis: ${totalProductCost.toFixed(2).replace('.', ',')} €`;
             orderDiv.appendChild(itemPriceEl);
 
             const tipEl = document.createElement('p'); // Trinkgeld anzeigen
@@ -870,7 +951,7 @@
             orderDiv.appendChild(tipEl);
 
 
-            const totalPrice = ((order.itemPrice || 0) * (order.quantity || 1)) + DELIVERY_FEE + (order.tipAmount || 0);
+            const totalPrice = totalProductCost + DELIVERY_FEE + (order.tipAmount || 0);
             const totalPriceEl = document.createElement('p');
             totalPriceEl.className = 'text-md font-bold text-indigo-700 mt-1';
             const formattedTotalPrice = totalPrice.toFixed(2).replace('.', ',');
@@ -929,7 +1010,8 @@
                     const newStatus = e.target.value;
                     showModal(
                         `Möchtest du den Status für ${order.customerName}'s Bestellung wirklich auf "${newStatus}" ändern?`,
-                        () => updateOrderStatus(orderId, order.status, newStatus, order.itemPrice, order.quantity, order.tipAmount)
+                        // Beim Statuswechsel den totalProductCost übergeben
+                        () => updateOrderStatus(orderId, order.status, newStatus, totalProductCost, order.tipAmount)
                     );
                 });
                 adminControlsDiv.appendChild(statusChangeSelect);
@@ -978,9 +1060,7 @@
                         async () => {
                             // Bevor die Bestellung gelöscht wird, die Finanzübersicht anpassen
                             if (order.status === 'bezahlt') {
-                                // Rufe updateFinancialSummary mit altem Status 'bezahlt' und neuem 'storniert' auf,
-                                // um die Finanzwerte korrekt rückgängig zu machen.
-                                await updateFinancialSummary(orderId, 'bezahlt', 'storniert', order.itemPrice, order.quantity, order.tipAmount);
+                                await updateFinancialSummary(orderId, 'bezahlt', 'storniert', totalProductCost, order.tipAmount);
                             }
                             await deleteOrder(orderId);
                         }
@@ -994,9 +1074,9 @@
         }
 
         // Funktion zum Aktualisieren des Bestellstatus
-        async function updateOrderStatus(orderId, oldStatus, newStatus, itemPrice, quantity, tipAmount) {
+        async function updateOrderStatus(orderId, oldStatus, newStatus, totalProductCost, tipAmount) {
             if (!ordersCollection) {
-                console.error("Orders collection is not initialized. Cannot update order status.");
+                console.error("Orders collection is not initialized.");
                 return;
             }
             const orderRef = doc(db, ordersCollectionPath, orderId);
@@ -1007,8 +1087,7 @@
                 });
                 console.log(`Order ${orderId} status updated to: ${newStatus}`);
                 
-                // Finanzübersicht aktualisieren, wenn Status bezahlt wird oder von bezahlt wechselt
-                await updateFinancialSummary(orderId, oldStatus, newStatus, itemPrice, quantity, tipAmount);
+                await updateFinancialSummary(orderId, oldStatus, newStatus, totalProductCost, tipAmount);
 
             } catch (error) {
                 console.error("Error updating order status: ", error);
@@ -1020,7 +1099,7 @@
         // Delete order
         async function deleteOrder(orderId) {
             if (!ordersCollection) {
-                console.error("Orders collection is not initialized. Cannot delete order.");
+                console.error("Orders collection is not initialized.");
                 return;
             }
             const orderRef = doc(db, ordersCollectionPath, orderId);
@@ -1109,16 +1188,25 @@
         // Berechnung des Umsatzes aus bezahlten Bestellungen (Produkte + Gebühr + Trinkgeld)
         function calculateTotalRevenueFromPaidOrders(orders) {
             return orders.filter(o => o.status === 'bezahlt').reduce((sum, order) => {
-                return sum + ((order.itemPrice || 0) * (order.quantity || 1)) + DELIVERY_FEE + (order.tipAmount || 0);
+                // Berücksichtige neues und altes Schema für Produktkosten
+                const productCost = order.totalProductCost || ((order.itemPrice || 0) * (order.quantity || 1));
+                return sum + productCost + DELIVERY_FEE + (order.tipAmount || 0);
             }, 0);
         }
 
         function renderTopItems(orders) {
             const itemCounts = {};
             orders.forEach(order => {
-                const itemName = order.orderDetails;
-                const quantity = order.quantity || 1;
-                itemCounts[itemName] = (itemCounts[itemName] || 0) + quantity;
+                if (order.items && Array.isArray(order.items)) {
+                    order.items.forEach(item => {
+                        itemCounts[item.name] = (itemCounts[item.name] || 0) + item.quantity;
+                    });
+                } else {
+                    // Fallback für alte Bestellungen
+                    const itemName = order.orderDetails;
+                    const quantity = order.quantity || 1;
+                    itemCounts[itemName] = (itemCounts[itemName] || 0) + quantity;
+                }
             });
 
             const sortedItems = Object.entries(itemCounts)
@@ -1138,9 +1226,16 @@
         function renderAggregatedShoppingList(orders) {
             const shoppingList = {};
             orders.filter(o => o.status === 'offen').forEach(order => {
-                const itemName = order.orderDetails;
-                const quantity = order.quantity || 1;
-                shoppingList[itemName] = (shoppingList[itemName] || 0) + quantity;
+                if (order.items && Array.isArray(order.items)) {
+                    order.items.forEach(item => {
+                        shoppingList[item.name] = (shoppingList[item.name] || 0) + item.quantity;
+                    });
+                } else {
+                    // Fallback für alte Bestellungen
+                    const itemName = order.orderDetails;
+                    const quantity = order.quantity || 1;
+                    shoppingList[itemName] = (shoppingList[itemName] || 0) + quantity;
+                }
             });
 
             const sortedShoppingList = Object.entries(shoppingList)
@@ -1303,39 +1398,77 @@
 
 
         // --- Event Listeners ---
-        // submitOrderButton triggert jetzt das Trinkgeld-Modal
-        submitOrderButton.addEventListener('click', () => {
-            const name = customerNameInput.value.trim();
-            const classroom = classroomInput.value.trim();
-            let details;
-            let itemPrice;
-            const quantity = parseInt(itemQuantityInput.value) || 1;
+        // NEU: Hinzufügen zum Warenkorb Button
+        addItemToCartButton.addEventListener('click', () => {
+            let itemName;
+            let unitPrice;
+            const quantity = parseInt(itemQuantityInput.value);
 
             const selectedIndex = popularItemSelect.value;
             const selectedItem = POPULAR_ITEMS[selectedIndex];
 
-            if (selectedItem && !selectedItem.isPlaceholder) {
-                if (selectedItem.isOther) {
-                    details = orderDetailsInput.value.trim();
-                    itemPrice = parseFloat(itemPriceInput.value);
-                } else {
-                    details = selectedItem.name;
-                    itemPrice = selectedItem.price;
-                }
-            } else { // Fallback, falls kein Produkt ausgewählt ist und "Sonstiges" nicht der aktive Tab ist.
-                     // Dies sollte bei korrekter Logik selten auftreten.
-                details = orderDetailsInput.value.trim();
-                itemPrice = parseFloat(itemPriceInput.value);
+            if (selectedItem.isPlaceholder) {
+                showModal("Bitte wähle ein Produkt aus oder gib 'Sonstiges' ein.", () => {});
+                return;
             }
 
-            // Grundlegende Validierung vor dem Trinkgeld-Modal
-            if (!name) { showModal("Bitte gib deinen Namen ein.", () => {}); return; }
-            if (!details) { showModal("Bitte gib die Details deiner Bestellung ein.", () => {}); return; }
-            if (isNaN(itemPrice) || itemPrice < 0) { showModal("Bitte gib einen gültigen Preis für den Artikel ein (z.B. 1.50).", () => {}); return; }
+            if (selectedItem.isOther) {
+                itemName = orderDetailsInput.value.trim();
+                unitPrice = parseFloat(itemPriceInput.value);
+            } else {
+                itemName = selectedItem.name;
+                unitPrice = selectedItem.price;
+            }
+
+            if (!itemName) { showModal("Bitte gib die Details des Artikels ein.", () => {}); return; }
+            if (isNaN(unitPrice) || unitPrice <= 0) { showModal("Bitte gib einen gültigen Preis (pro Stück) für den Artikel ein.", () => {}); return; }
             if (isNaN(quantity) || quantity < 1) { showModal("Bitte gib eine gültige Menge (mind. 1) ein.", () => {}); return; }
 
+            // Prüfen, ob der Artikel bereits im Warenkorb ist und Menge erhöhen
+            const existingItemIndex = currentOrderItems.findIndex(
+                item => item.name === itemName && item.unitPrice === unitPrice
+            );
+
+            if (existingItemIndex > -1) {
+                currentOrderItems[existingItemIndex].quantity += quantity;
+            } else {
+                currentOrderItems.push({ name: itemName, unitPrice: unitPrice, quantity: quantity });
+            }
+
+            // Formular für den nächsten Artikel leeren
+            popularItemSelect.value = 0; // Wähle den Platzhalter aus
+            handlePopularItemSelection(); // Setzt Felder auf Standardwerte zurück
+            itemQuantityInput.value = 1;
+
+            updateCartDisplay();
+            showModal(`${quantity}x "${itemName}" zur Bestellung hinzugefügt.`, () => {});
+        });
+
+        // NEU: Warenkorb leeren Button
+        clearCartButton.addEventListener('click', () => {
+            showModal("Möchtest du die gesamte Bestellung wirklich löschen?", () => {
+                currentOrderItems = [];
+                updateCartDisplay();
+            });
+        });
+
+        // submitOrderButton triggert jetzt das Trinkgeld-Modal für die GESAMTE Bestellung
+        submitOrderButton.addEventListener('click', () => {
+            const customerName = customerNameInput.value.trim();
+            const classroom = classroomInput.value.trim();
+
+            if (!customerName) { showModal("Bitte gib deinen Namen ein.", () => {}); return; }
+            if (currentOrderItems.length === 0) { showModal("Deine Bestellung ist leer. Bitte füge Artikel hinzu.", () => {}); return; }
+
+            const totalProductCost = currentOrderItems.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
+
             // Speichere die aktuellen Bestelldaten temporär
-            pendingOrderData = { name, classroom, details, itemPrice, quantity };
+            pendingOrderData = {
+                customerName: customerName,
+                classroom: classroom,
+                items: [...currentOrderItems], // Kopie des Arrays
+                totalProductCost: totalProductCost
+            };
             showTipModal(); // Zeige das Trinkgeld-Modal
         });
 
@@ -1344,39 +1477,29 @@
         // Event Listener für Schnell-Nachbestellung
         reorderLastOrderButton.addEventListener('click', async () => {
             if (!currentUserId) return;
-            const userProfileRef = doc(db, userProfilesCollectionPath, currentUserId); // Korrekter Pfad
+            const userProfileRef = doc(db, userProfilesCollectionPath, currentUserId);
             try {
                 const docSnap = await getDoc(userProfileRef);
                 if (docSnap.exists() && docSnap.data().lastOrderDetails) {
                     const lastOrder = docSnap.data().lastOrderDetails;
                     
-                    // Setze den Kundennamen nur, wenn er im lastOrder-Objekt vorhanden ist
-                    // Falls nicht, wird der aktuelle Wert im Input behalten (kann leer sein).
-                    if (lastOrder.customerName) {
-                        customerNameInput.value = lastOrder.customerName;
-                    }
-                    
+                    customerNameInput.value = lastOrder.customerName || ''; 
                     classroomInput.value = lastOrder.classroom || '';
-                    orderDetailsInput.value = lastOrder.orderDetails;
-                    itemPriceInput.value = lastOrder.itemPrice.toFixed(2);
-                    itemQuantityInput.value = lastOrder.quantity;
-
-                    const matchingProductIndex = POPULAR_ITEMS.findIndex(
-                        p => p.name === lastOrder.orderDetails && p.price.toFixed(2) === lastOrder.itemPrice.toFixed(2)
-                    );
-                    if (matchingProductIndex !== -1) {
-                        popularItemSelect.value = matchingProductIndex;
-                        handlePopularItemSelection();
+                    
+                    if (lastOrder.items && Array.isArray(lastOrder.items)) {
+                        currentOrderItems = [...lastOrder.items]; // Kopie der letzten Artikel
                     } else {
-                        // Wenn kein passendes Produkt gefunden wird, wähle "Sonstiges" aus
-                        const otherIndex = POPULAR_ITEMS.findIndex(p => p.isOther);
-                        if (otherIndex !== -1) {
-                            popularItemSelect.value = otherIndex;
-                            handlePopularItemSelection();
-                        } else {
-                            console.warn("Could not find 'Sonstiges...' option in popular items.");
-                        }
+                        // Fallback für alte, Einzel-Bestellungen in Nachbestellung
+                        currentOrderItems = [{
+                            name: lastOrder.orderDetails,
+                            unitPrice: lastOrder.itemPrice || 0,
+                            quantity: lastOrder.quantity || 1
+                        }];
                     }
+                    updateCartDisplay();
+                    popularItemSelect.value = 0; // Formular für neue Eingabe zurücksetzen
+                    handlePopularItemSelection();
+
                     showModal('Letzte Bestellung ins Formular geladen. Bitte überprüfen und abschicken!', () => {});
                 } else {
                     showModal('Keine letzte Bestellung gefunden.', () => {});
@@ -1440,29 +1563,23 @@
                 const data = docSnapshot.data();
                 const hoferTripActive = data.hoferTripActive;
                 const hoferTripTimestamp = data.hoferTripTimestamp ? data.hoferTripTimestamp.toDate() : null;
-                // const hoferTripInitiator = data.hoferTripInitiator; // Nicht direkt verwendet
                 const hoferMessage = data.hoferMessage;
 
                 if (hoferTripActive && hoferTripTimestamp) {
                     const now = new Date();
-                    // Überprüfe, ob die Nachricht nicht älter als z.B. 30 Minuten ist,
-                    // es sei denn, man ist Admin (um den Button zu sehen)
                     const thirtyMinutesAgo = new Date(now.getTime() - (30 * 60 * 1000)); 
 
                     if (hoferTripTimestamp > thirtyMinutesAgo || (ADMIN_UIDS.includes(currentUserId))) {
-                        // Wenn der User Admin ist, oder die Nachricht nicht zu alt ist, zeige sie
                         showHoferNotification(hoferMessage, (ADMIN_UIDS.includes(currentUserId) && hoferTripActive));
                     } else {
-                        // Wenn die Nachricht zu alt ist, verstecke das Banner
                         hideHoferNotification();
-                        localStorage.removeItem('dismissedHoferTrip'); // Ermögliche erneute Anzeige bei neuem Trip
+                        localStorage.removeItem('dismissedHoferTrip');
                     }
                 } else {
                     hideHoferNotification();
                     localStorage.removeItem('dismissedHoferTrip');
                 }
             } else {
-                // Dokument existiert nicht -> kein Trip aktiv
                 hideHoferNotification();
                 localStorage.removeItem('dismissedHoferTrip');
             }
@@ -1487,13 +1604,11 @@
             productsTabButton.classList.remove('active');
             dashboardTabButton.classList.remove('active');
             
-            // Verstecke alle Sektionen außerhalb des Tab-Contents zuerst
             orderFormSection.style.display = 'none';
             ordersFilterSortSection.style.display = 'none';
             ordersListSection.style.display = 'none';
-            tabContentDiv.innerHTML = ''; // Vorherigen Tab-Inhalt leeren
+            tabContentDiv.innerHTML = '';
 
-            // Sektionen in den Tab-Content verschieben und sichtbar machen
             tabContentDiv.appendChild(orderFormSection);
             tabContentDiv.appendChild(ordersFilterSortSection);
             tabContentDiv.appendChild(ordersListSection);
@@ -1502,7 +1617,7 @@
             ordersFilterSortSection.style.display = 'block';
             ordersListSection.style.display = 'block';
             
-            loadOrders(); // Lade Bestellungen neu für den Orders Tab
+            loadOrders();
         });
 
         productsTabButton.addEventListener('click', () => {
@@ -1510,13 +1625,11 @@
             productsTabButton.classList.add('active');
             dashboardTabButton.classList.remove('active');
             
-            // Verstecke Sektionen, die nicht in diesem Tab sind
             orderFormSection.style.display = 'none';
             ordersFilterSortSection.style.display = 'none';
             ordersListSection.style.display = 'none';
 
-            // Hier wird der HTML-Inhalt des Produktmanagements direkt in den tabContentDiv geladen
-            renderProductManagement(); // Rendere Produktverwaltung
+            renderProductManagement();
         });
 
         dashboardTabButton.addEventListener('click', () => {
@@ -1524,13 +1637,11 @@
             productsTabButton.classList.remove('active');
             dashboardTabButton.classList.add('active');
             
-            // Verstecke Sektionen, die nicht in diesem Tab sind
             orderFormSection.style.display = 'none';
             ordersFilterSortSection.style.display = 'none';
             ordersListSection.style.display = 'none';
             
-            // Das Dashboard wird durch loadOrders() aktualisiert, die dann updateAdminDashboard aufruft
-            loadOrders(); // Lade Bestellungen neu, was das Dashboard aktualisiert
+            loadOrders();
         });
     </script>
 </body>
