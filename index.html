@@ -27,8 +27,6 @@
             height: 100%; /* Full height */
             overflow: auto; /* Enable scroll if needed */
             background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
-            /* REMOVE THE FOLLOWING LINE OR CHANGE TO display: none; */
-            /* display: flex;  <-- THIS LINE */
             align-items: center; /* Vertikal zentrieren */
             justify-content: center; /* Horizontal zentrieren */
         }
@@ -253,7 +251,7 @@
     </div>
 
     <footer class="text-center mt-8 mb-4">
-        <p class="text-sm text-indigo-100">&copy; <span id="currentYear"></span> Lieferdienst Nell - Ein Gag-Projekt von Johannes N.</p>
+        <p class="text-sm text-indigo-100">© <span id="currentYear"></span> Lieferdienst Nell - Ein Gag-Projekt von Johannes N.</p>
     </footer>
 
     <!-- Hofer Notification Banner (Webseiten-Pop-up) -->
@@ -272,7 +270,7 @@
         // Firebase Imports
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, serverTimestamp, query, orderBy, where, getDocs, setDoc, runTransaction } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, serverTimestamp, query, orderBy, where, getDocs, setDoc, runTransaction, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 
@@ -283,11 +281,11 @@
             projectId: "lieferdienst-nell",
             storageBucket: "lieferdienst-nell.firebasestorage.app",
             messagingSenderId: "1040028718739",
-            appId: "1:1040028718739:web:1d70d11875d75cc195df66", // BITTE HIER DEINE ECHTE APP_ID ERSETZEN
+            // BITTE DIESE APP_ID DURCH DEINE ECHTE APP_ID ERSETZEN!
+            // Wenn diese App-ID nicht stimmt, funktionieren die Firestore-Pfade nicht!
+            appId: "1:1040028718739:web:1d70d11875d75cc195df66",
             measurementId: "G-Y06HR8YKHC"
         };
-
-                // ... (Deine Imports und firebaseConfig bleiben gleich)
 
         // Initialize Firebase
         let app;
@@ -297,34 +295,53 @@
         let productsCollection;
         let userProfilesCollection;
         let financialSummaryCollection; // Financial Summary Collection
+
+        // DEFINIERE ALLE PFADE HIER VORHER
         let ordersCollectionPath = `artifacts/${firebaseConfig.appId}/public/data/lieferdienstNellOrders`;
         let productsCollectionPath = `artifacts/${firebaseConfig.appId}/public/data/products`;
         let userProfilesCollectionPath = `artifacts/${firebaseConfig.appId}/users`;
         let financialSummaryDocPath = `artifacts/${firebaseConfig.appId}/public/data/financialSummary/overall`; // Pfad zum Finanz-Summary-Dokument
-        
-        // Füge DIESE ZEILE HIER HINZU:
-        let hoferStatusDocPath = `artifacts/${firebaseConfig.appId}/public/data/hoferStatus/status`; 
-        
-        let hoferStatusDocRef; // Firestore DocumentReference (Diese Variable wurde bereits deklariert)
+        let hoferStatusDocPath = `artifacts/${firebaseConfig.appId}/public/data/hoferStatus/status`; // Korrigierter Pfad
+
+        let hoferStatusDocRef; // Firestore DocumentReference
 
         let currentUserId = null;
 
-        // ... (Restlicher Code bleibt gleich bis zum try-Block)
+        // Konstante für die Liefergebühr
+        const DELIVERY_FEE = 0.10; // 10 Cent
+
+        // Array von User IDs für Admin-Funktionen
+        // HIER SIND DEINE ADMIN UIDS EINGETRAGEN
+        const ADMIN_UIDS = ['oXsY6EHMPmb20t07XGtN7cHLT3z2', '7LW8aCpvaKdHOxDJDqMmd1kiT5y1']; 
+
+        // Initial leere Produktliste, wird aus Firestore geladen
+        let POPULAR_ITEMS = [{ name: "Wähle ein Produkt...", price: 0, isPlaceholder: true }];
+
+        // Aktuelle Filter- und Sortier-Einstellungen
+        let currentStatusFilter = 'all';
+        let currentSortOrder = 'createdAt_desc';
+
 
         try {
             app = initializeApp(firebaseConfig);
             db = getFirestore(app);
             auth = getAuth(app);
-            setLogLevel('debug');
+            setLogLevel('debug'); // Kann auf 'silent' oder 'error' gesetzt werden, wenn du weniger Logs möchtest
             console.log("Firebase App initialized successfully.");
 
             ordersCollection = collection(db, ordersCollectionPath);
             productsCollection = collection(db, productsCollectionPath);
             userProfilesCollection = collection(db, userProfilesCollectionPath);
             financialSummaryCollection = collection(db, `artifacts/${firebaseConfig.appId}/public/data/financialSummary`);
-            
-            // Ändere DIESE ZEILE:
-            hoferStatusDocRef = doc(db, hoferStatusDocPath); // Jetzt ist hoferStatusDocPath definiert!
+            hoferStatusDocRef = doc(db, hoferStatusDocPath); // Jetzt ist hoferStatusDocPath definiert
+
+            // Debugging: Logge die Pfade, um zu sehen, ob sie korrekt sind
+            console.log("Firestore Orders Collection Path:", ordersCollectionPath);
+            console.log("Firestore Products Collection Path:", productsCollectionPath);
+            console.log("Firestore User Profiles Collection Path:", userProfilesCollectionPath);
+            console.log("Firestore Financial Summary Doc Path:", financialSummaryDocPath);
+            console.log("Firestore Hofer Status Doc Path:", hoferStatusDocPath);
+
 
             // Initialisiere das Financial Summary Dokument, falls es nicht existiert
             initFinancialSummary();
@@ -333,10 +350,9 @@
             console.error("Error initializing Firebase:", error);
             const userIdDisplay = document.getElementById('userIdDisplay');
             if(userIdDisplay) userIdDisplay.textContent = "Firebase Fehler";
-            throw new Error("Firebase initialization failed. App cannot continue.");
+            // Wirf den Fehler nicht, damit die App nicht komplett abstürzt, sondern den Nutzerfehler anzeigt.
+            // throw new Error("Firebase initialization failed. App cannot continue.");
         }
-
-        // ... (Rest des Skripts)
 
 
         // --- DOM Elements ---
@@ -411,9 +427,17 @@
                 userIdDisplay.textContent = currentUserId;
                 console.log("User is signed in with UID:", currentUserId);
                 
-                await loadProducts(); 
-                loadOrders(); 
-                loadUserProfile(); 
+                // Stelle sicher, dass ordersCollection und productsCollection initialisiert sind, bevor sie verwendet werden.
+                // Dies sollte durch den try-Block oben geschehen sein, aber eine erneute Prüfung schadet nicht.
+                if (!ordersCollection || !productsCollection) {
+                    console.error("Firebase collections not fully initialized after auth. Retrying...");
+                    // Optional: Kurze Verzögerung und erneuter Versuch, falls ein seltener Race-Condition vorliegt.
+                    // Für jetzt lassen wir es einfach und prüfen, ob die oben genannten Schritte ausreichen.
+                }
+
+                await loadProducts(); // Produkte laden, sobald authentifiziert
+                loadOrders(); // Bestellungen laden, sobald authentifiziert
+                loadUserProfile(); // User-Profil laden
 
                 if (ADMIN_UIDS.includes(currentUserId)) {
                     adminTabsDiv.classList.remove('hidden');
@@ -472,9 +496,12 @@
 
         // Funktion zum Laden des Benutzerprofils und der letzten Bestellung
         async function loadUserProfile() {
-            if (!currentUserId) return;
+            if (!currentUserId) {
+                console.log("No currentUserId for loadUserProfile.");
+                return;
+            }
 
-            const userProfileRef = doc(db, userProfilesCollection, currentUserId);
+            const userProfileRef = doc(db, userProfilesCollectionPath, currentUserId); // Verwende den korrekten Pfad
             onSnapshot(userProfileRef, (docSnapshot) => {
                 if (docSnapshot.exists() && docSnapshot.data().lastOrderDetails) {
                     const lastOrder = docSnapshot.data().lastOrderDetails;
@@ -490,8 +517,11 @@
 
         // Funktion zum Speichern der letzten Bestellung im Benutzerprofil
         async function saveLastOrderToProfile(orderDetails, itemPrice, quantity, classroom) {
-            if (!currentUserId) return;
-            const userProfileRef = doc(db, userProfilesCollection, currentUserId);
+            if (!currentUserId) {
+                console.log("No currentUserId for saveLastOrderToProfile.");
+                return;
+            }
+            const userProfileRef = doc(db, userProfilesCollectionPath, currentUserId); // Verwende den korrekten Pfad
             try {
                 await setDoc(userProfileRef, {
                     lastOrderDetails: {
@@ -511,6 +541,10 @@
 
         // Funktion zum Laden der Produkte aus Firestore
         async function loadProducts() {
+            if (!productsCollection) {
+                console.error("Products collection is not initialized. Cannot load products.");
+                return;
+            }
             try {
                 onSnapshot(query(productsCollection, orderBy('order', 'asc')), (snapshot) => {
                     POPULAR_ITEMS = [{ name: "Wähle ein Produkt...", price: 0, isPlaceholder: true }];
@@ -644,8 +678,8 @@
         // Add new order (Diese Funktion wird jetzt durch das Trinkgeld-Modal getriggert)
         async function proceedAddOrder(name, classroom, details, itemPrice, quantity, tipAmount) {
             if (!ordersCollection) {
-                console.error("Orders collection is not initialized.");
-                showModal("Fehler: Datenbankverbindung nicht bereit.", () => {});
+                console.error("Orders collection is not initialized. Cannot add order.");
+                showModal("Fehler: Datenbankverbindung nicht bereit. Versuche die Seite neu zu laden.", () => {});
                 return;
             }
 
@@ -695,24 +729,23 @@
                     const currentRevenueFromOrder = DELIVERY_FEE + (tipAmount || 0);
 
                     // Effektive Finanzwerte der Bestellung
-                    let effectiveRevenue = 0;
-                    let effectiveExpense = 0;
+                    let effectiveRevenueChange = 0;
+                    let effectiveExpenseChange = 0;
 
-                    // Alte Bestellung war bezahlt, neue ist nicht bezahlt -> Finanzwerte rückgängig machen
-                    if (oldStatus === 'bezahlt' && newStatus !== 'bezahlt') {
-                        effectiveRevenue = -currentRevenueFromOrder;
-                        effectiveExpense = -currentItemCost;
-                    }
-                    // Alte Bestellung war nicht bezahlt, neue ist bezahlt -> Finanzwerte hinzufügen
-                    else if (oldStatus !== 'bezahlt' && newStatus === 'bezahlt') {
-                        effectiveRevenue = currentRevenueFromOrder;
-                        effectiveExpense = currentItemCost;
+                    // Logik: Nur wenn der Statuswechsel eine Änderung der Finanzwerte bedeutet
+                    // Beispiel: Wechsel von 'offen' zu 'bezahlt' -> addiere, von 'bezahlt' zu 'storniert' -> subtrahiere
+                    if (oldStatus !== 'bezahlt' && newStatus === 'bezahlt') {
+                        effectiveRevenueChange = currentRevenueFromOrder;
+                        effectiveExpenseChange = currentItemCost;
+                    } else if (oldStatus === 'bezahlt' && newStatus !== 'bezahlt') {
+                        effectiveRevenueChange = -currentRevenueFromOrder;
+                        effectiveExpenseChange = -currentItemCost;
                     }
                     // Wenn der Status von bezahlt zu bezahlt geändert wird (z.B. nur Notizen), keine Änderung
                     // Wenn der Status von offen zu offen geändert wird, keine Änderung
 
-                    totalCollectedRevenue += effectiveRevenue;
-                    totalProductExpenses += effectiveExpense;
+                    totalCollectedRevenue += effectiveRevenueChange;
+                    totalProductExpenses += effectiveExpenseChange;
                     
                     transaction.set(financialDocRef, {
                         totalCollectedRevenue: totalCollectedRevenue,
@@ -730,18 +763,17 @@
 
         // Load and display orders
         function loadOrders() {
-            if (!auth.currentUser) {
-                console.log("User not authenticated yet. Waiting for auth state change.");
-                loadingOrdersDiv.classList.remove('hidden');
-                noOrdersDiv.classList.add('hidden');
-                ordersContainer.innerHTML = '';
-                return;
-            }
             if (!ordersCollection) {
                 console.error("Orders collection is not initialized. Cannot load orders.");
                 loadingOrdersDiv.textContent = "Fehler beim Laden der Bestellungen (DB nicht bereit).";
                 return;
             }
+
+            // Stelle sicher, dass der Lade-Text angezeigt wird, bis Daten da sind
+            loadingOrdersDiv.classList.remove('hidden');
+            noOrdersDiv.classList.add('hidden');
+            ordersContainer.innerHTML = '';
+
 
             let q = query(ordersCollection);
 
@@ -752,6 +784,7 @@
             const [sortField, sortDirection] = currentSortOrder.split('_');
             if (sortField === 'totalPrice') {
                  console.warn("Client-seitige Sortierung nach Gesamtpreis ist aktiv.");
+                 // Keine Firestore orderBy hier, da wir später client-seitig sortieren
             } else if (sortField === 'customerName') {
                  q = query(q, orderBy('customerName', sortDirection));
             } else if (sortField === 'createdAt') {
@@ -789,6 +822,7 @@
                     });
                 }
                 // Dashboard nur aktualisieren, wenn Dashboard-Tab aktiv ist
+                // Wichtig: currentUserId muss hier gesetzt sein, was durch onAuthStateChanged gewährleistet ist
                 if (ADMIN_UIDS.includes(currentUserId) && dashboardTabButton.classList.contains('active')) {
                     updateAdminDashboard(orders);
                 }
@@ -944,6 +978,8 @@
                         async () => {
                             // Bevor die Bestellung gelöscht wird, die Finanzübersicht anpassen
                             if (order.status === 'bezahlt') {
+                                // Rufe updateFinancialSummary mit altem Status 'bezahlt' und neuem 'storniert' auf,
+                                // um die Finanzwerte korrekt rückgängig zu machen.
                                 await updateFinancialSummary(orderId, 'bezahlt', 'storniert', order.itemPrice, order.quantity, order.tipAmount);
                             }
                             await deleteOrder(orderId);
@@ -960,7 +996,7 @@
         // Funktion zum Aktualisieren des Bestellstatus
         async function updateOrderStatus(orderId, oldStatus, newStatus, itemPrice, quantity, tipAmount) {
             if (!ordersCollection) {
-                console.error("Orders collection is not initialized.");
+                console.error("Orders collection is not initialized. Cannot update order status.");
                 return;
             }
             const orderRef = doc(db, ordersCollectionPath, orderId);
@@ -984,7 +1020,7 @@
         // Delete order
         async function deleteOrder(orderId) {
             if (!ordersCollection) {
-                console.error("Orders collection is not initialized.");
+                console.error("Orders collection is not initialized. Cannot delete order.");
                 return;
             }
             const orderRef = doc(db, ordersCollectionPath, orderId);
@@ -1021,8 +1057,19 @@
         async function updateAdminDashboard(orders) {
             const openOrdersCount = orders.filter(o => o.status === 'offen').length;
             const totalRevenuePaidOrders = calculateTotalRevenueFromPaidOrders(orders); // Gesamtumsatz der bezahlten Bestellungen (enthält auch itemPrice)
-            const financialSummaryDoc = await getDoc(doc(financialSummaryCollection, 'overall')); // Finanz-Summary laden
-            const currentFinancials = financialSummaryDoc.exists ? financialSummaryDoc.data() : { totalCollectedRevenue: 0, totalProductExpenses: 0 };
+            
+            // Lade die aktuellen Finanzdaten vom Dokument
+            let currentFinancials = { totalCollectedRevenue: 0, totalProductExpenses: 0 };
+            try {
+                const financialSummaryDocSnap = await getDoc(doc(financialSummaryCollection, 'overall'));
+                if (financialSummaryDocSnap.exists()) {
+                    currentFinancials = financialSummaryDocSnap.data();
+                } else {
+                    console.warn("Financial summary document does not exist yet.");
+                }
+            } catch (error) {
+                console.error("Error fetching financial summary for dashboard:", error);
+            }
             
             const totalCollectedRevenue = currentFinancials.totalCollectedRevenue || 0;
             const totalProductExpenses = currentFinancials.totalProductExpenses || 0;
@@ -1039,7 +1086,7 @@
                         <p class="text-2xl font-bold text-blue-800">${openOrdersCount}</p>
                     </div>
                     <div class="bg-green-100 p-4 rounded-lg shadow-sm">
-                        <p class="text-sm text-green-700">Gesamtumsatz (Produkte + Liefergebühr + Trinkgeld - bezahlt):</p>
+                        <p class="text-sm text-green-700">Gesamtumsatz (bezahlte Bestellungen):</p>
                         <p class="text-2xl font-bold text-green-800">${totalRevenuePaidOrders.toFixed(2).replace('.', ',')} €</p>
                     </div>
                     <div class="bg-purple-100 p-4 rounded-lg shadow-sm">
@@ -1148,6 +1195,12 @@
             let editingProductId = null; // Für den Bearbeitungsmodus
 
             // Produkte live anzeigen und verwalten (Admin-Ansicht)
+            if (!productsCollection) {
+                currentProductsList.innerHTML = `<p class="text-red-500 text-center">Fehler: Produkte können nicht geladen werden, Collection nicht initialisiert.</p>`;
+                console.error("Products collection is not initialized when trying to render product management.");
+                return;
+            }
+
             onSnapshot(query(productsCollection, orderBy('order', 'asc')), (snapshot) => {
                 currentProductsList.innerHTML = '';
                 if (snapshot.empty) {
@@ -1269,7 +1322,8 @@
                     details = selectedItem.name;
                     itemPrice = selectedItem.price;
                 }
-            } else {
+            } else { // Fallback, falls kein Produkt ausgewählt ist und "Sonstiges" nicht der aktive Tab ist.
+                     // Dies sollte bei korrekter Logik selten auftreten.
                 details = orderDetailsInput.value.trim();
                 itemPrice = parseFloat(itemPriceInput.value);
             }
@@ -1290,13 +1344,18 @@
         // Event Listener für Schnell-Nachbestellung
         reorderLastOrderButton.addEventListener('click', async () => {
             if (!currentUserId) return;
-            const userProfileRef = doc(db, userProfilesCollection, currentUserId);
+            const userProfileRef = doc(db, userProfilesCollectionPath, currentUserId); // Korrekter Pfad
             try {
                 const docSnap = await getDoc(userProfileRef);
                 if (docSnap.exists() && docSnap.data().lastOrderDetails) {
                     const lastOrder = docSnap.data().lastOrderDetails;
-                    // Der Name des Kunden wird nicht in lastOrderDetails gespeichert, da er vom customerNameInput kommt
-                    customerNameInput.value = lastOrder.customerName || ''; // Falls du Namen auch in userProfile speichern möchtest
+                    
+                    // Setze den Kundennamen nur, wenn er im lastOrder-Objekt vorhanden ist
+                    // Falls nicht, wird der aktuelle Wert im Input behalten (kann leer sein).
+                    if (lastOrder.customerName) {
+                        customerNameInput.value = lastOrder.customerName;
+                    }
+                    
                     classroomInput.value = lastOrder.classroom || '';
                     orderDetailsInput.value = lastOrder.orderDetails;
                     itemPriceInput.value = lastOrder.itemPrice.toFixed(2);
@@ -1309,8 +1368,14 @@
                         popularItemSelect.value = matchingProductIndex;
                         handlePopularItemSelection();
                     } else {
-                        popularItemSelect.value = POPULAR_ITEMS.findIndex(p => p.isOther);
-                        handlePopularItemSelection();
+                        // Wenn kein passendes Produkt gefunden wird, wähle "Sonstiges" aus
+                        const otherIndex = POPULAR_ITEMS.findIndex(p => p.isOther);
+                        if (otherIndex !== -1) {
+                            popularItemSelect.value = otherIndex;
+                            handlePopularItemSelection();
+                        } else {
+                            console.warn("Could not find 'Sonstiges...' option in popular items.");
+                        }
                     }
                     showModal('Letzte Bestellung ins Formular geladen. Bitte überprüfen und abschicken!', () => {});
                 } else {
@@ -1327,6 +1392,7 @@
         hoferTripButton.addEventListener('click', async () => {
             showModal("Möchtest du wirklich eine Benachrichtigung an alle senden, dass du zum Hofer gehst?", async () => {
                 try {
+                    // Verwende setDoc, um das Dokument zu erstellen oder zu aktualisieren
                     await setDoc(hoferStatusDocRef, {
                         hoferTripActive: true,
                         hoferTripTimestamp: serverTimestamp(),
@@ -1335,7 +1401,7 @@
                     });
                     console.log("Hofer trip status activated.");
                     hideHoferNotification();
-                    localStorage.removeItem('dismissedHoferTrip');
+                    localStorage.removeItem('dismissedHoferTrip'); // Banner wird wieder angezeigt
                 } catch (error) {
                     console.error("Error activating Hofer trip status:", error);
                     showModal(`Fehler beim Aktivieren des Hofer-Status: ${error.message}`, () => {});
@@ -1355,12 +1421,12 @@
                 try {
                     await updateDoc(hoferStatusDocRef, {
                         hoferTripActive: false,
-                        hoferTripTimestamp: serverTimestamp(),
-                        hoferMessage: null
+                        hoferTripTimestamp: serverTimestamp(), // Aktualisiere den Timestamp
+                        hoferMessage: null // Setze Nachricht zurück
                     });
                     console.log("Hofer trip status deactivated.");
                     hideHoferNotification();
-                    localStorage.removeItem('dismissedHoferTrip');
+                    localStorage.removeItem('dismissedHoferTrip'); // Banner kann wieder angezeigt werden
                 } catch (error) {
                     console.error("Error deactivating Hofer trip status:", error);
                     showModal(`Fehler beim Deaktivieren des Hofer-Status: ${error.message}`, () => {});
@@ -1374,28 +1440,29 @@
                 const data = docSnapshot.data();
                 const hoferTripActive = data.hoferTripActive;
                 const hoferTripTimestamp = data.hoferTripTimestamp ? data.hoferTripTimestamp.toDate() : null;
-                const hoferTripInitiator = data.hoferTripInitiator;
+                // const hoferTripInitiator = data.hoferTripInitiator; // Nicht direkt verwendet
                 const hoferMessage = data.hoferMessage;
 
                 if (hoferTripActive && hoferTripTimestamp) {
                     const now = new Date();
-                    const fifteenMinutesAgo = new Date(now.getTime() - (15 * 60 * 1000));
+                    // Überprüfe, ob die Nachricht nicht älter als z.B. 30 Minuten ist,
+                    // es sei denn, man ist Admin (um den Button zu sehen)
+                    const thirtyMinutesAgo = new Date(now.getTime() - (30 * 60 * 1000)); 
 
-                    if (hoferTripTimestamp > fifteenMinutesAgo || (ADMIN_UIDS.includes(currentUserId) && hoferTripActive)) {
-                        if (localStorage.getItem('dismissedHoferTrip') === 'true' && !ADMIN_UIDS.includes(currentUserId)) {
-                            hideHoferNotification();
-                            return;
-                        }
-                        showHoferNotification(hoferMessage, ADMIN_UIDS.includes(currentUserId));
+                    if (hoferTripTimestamp > thirtyMinutesAgo || (ADMIN_UIDS.includes(currentUserId))) {
+                        // Wenn der User Admin ist, oder die Nachricht nicht zu alt ist, zeige sie
+                        showHoferNotification(hoferMessage, (ADMIN_UIDS.includes(currentUserId) && hoferTripActive));
                     } else {
+                        // Wenn die Nachricht zu alt ist, verstecke das Banner
                         hideHoferNotification();
-                        localStorage.removeItem('dismissedHoferTrip');
+                        localStorage.removeItem('dismissedHoferTrip'); // Ermögliche erneute Anzeige bei neuem Trip
                     }
                 } else {
                     hideHoferNotification();
                     localStorage.removeItem('dismissedHoferTrip');
                 }
             } else {
+                // Dokument existiert nicht -> kein Trip aktiv
                 hideHoferNotification();
                 localStorage.removeItem('dismissedHoferTrip');
             }
@@ -1415,12 +1482,6 @@
         });
 
         // Admin Tab Navigation
-        // Wichtig: Die Tab-Buttons müssen Event Listener für 'click' haben, um die Anzeige zu steuern
-        // und die Sektionen korrekt in den tabContentDiv zu verschieben/entfernen.
-        // Der Bug mit den "nicht anklickbaren Tabs" lag oft an falschen Anzeigestatus von Sektionen
-        // oder daran, dass innerHTML = '' die DOM-Elemente komplett entfernt hat.
-        // Die fixierte Logik stellt sicher, dass die Elemente nur verschoben werden, wenn sie nicht schon da sind,
-        // und ihre Display-Eigenschaft korrekt gesetzt wird.
         ordersTabButton.addEventListener('click', () => {
             ordersTabButton.classList.add('active');
             productsTabButton.classList.remove('active');
@@ -1441,7 +1502,7 @@
             ordersFilterSortSection.style.display = 'block';
             ordersListSection.style.display = 'block';
             
-            loadOrders();
+            loadOrders(); // Lade Bestellungen neu für den Orders Tab
         });
 
         productsTabButton.addEventListener('click', () => {
@@ -1455,7 +1516,7 @@
             ordersListSection.style.display = 'none';
 
             // Hier wird der HTML-Inhalt des Produktmanagements direkt in den tabContentDiv geladen
-            renderProductManagement();
+            renderProductManagement(); // Rendere Produktverwaltung
         });
 
         dashboardTabButton.addEventListener('click', () => {
@@ -1469,7 +1530,7 @@
             ordersListSection.style.display = 'none';
             
             // Das Dashboard wird durch loadOrders() aktualisiert, die dann updateAdminDashboard aufruft
-            loadOrders();
+            loadOrders(); // Lade Bestellungen neu, was das Dashboard aktualisiert
         });
     </script>
 </body>
