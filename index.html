@@ -287,6 +287,8 @@
             measurementId: "G-Y06HR8YKHC"
         };
 
+                // ... (Deine Imports und firebaseConfig bleiben gleich)
+
         // Initialize Firebase
         let app;
         let db;
@@ -299,24 +301,15 @@
         let productsCollectionPath = `artifacts/${firebaseConfig.appId}/public/data/products`;
         let userProfilesCollectionPath = `artifacts/${firebaseConfig.appId}/users`;
         let financialSummaryDocPath = `artifacts/${firebaseConfig.appId}/public/data/financialSummary/overall`; // Pfad zum Finanz-Summary-Dokument
-        let hoferStatusDocRef; // Firestore DocumentReference
+        
+        // Füge DIESE ZEILE HIER HINZU:
+        let hoferStatusDocPath = `artifacts/${firebaseConfig.appId}/public/data/hoferStatus/status`; 
+        
+        let hoferStatusDocRef; // Firestore DocumentReference (Diese Variable wurde bereits deklariert)
 
         let currentUserId = null;
 
-        // Konstante für die Liefergebühr
-        const DELIVERY_FEE = 0.10; // 10 Cent
-
-        // Array von User IDs für Admin-Funktionen
-        // HIER SIND DEINE ADMIN UIDS EINGETRAGEN
-        const ADMIN_UIDS = ['oXsY6EHMPmb20t07XGtN7cHLT3z2', '7LW8aCpvaKdHOxDJDqMmd1kiT5y1']; 
-
-        // Initial leere Produktliste, wird aus Firestore geladen
-        let POPULAR_ITEMS = [{ name: "Wähle ein Produkt...", price: 0, isPlaceholder: true }];
-
-        // Aktuelle Filter- und Sortier-Einstellungen
-        let currentStatusFilter = 'all';
-        let currentSortOrder = 'createdAt_desc';
-
+        // ... (Restlicher Code bleibt gleich bis zum try-Block)
 
         try {
             app = initializeApp(firebaseConfig);
@@ -329,7 +322,9 @@
             productsCollection = collection(db, productsCollectionPath);
             userProfilesCollection = collection(db, userProfilesCollectionPath);
             financialSummaryCollection = collection(db, `artifacts/${firebaseConfig.appId}/public/data/financialSummary`);
-            hoferStatusDocRef = doc(db, HOFER_STATUS_DOC_PATH);
+            
+            // Ändere DIESE ZEILE:
+            hoferStatusDocRef = doc(db, hoferStatusDocPath); // Jetzt ist hoferStatusDocPath definiert!
 
             // Initialisiere das Financial Summary Dokument, falls es nicht existiert
             initFinancialSummary();
@@ -340,6 +335,8 @@
             if(userIdDisplay) userIdDisplay.textContent = "Firebase Fehler";
             throw new Error("Firebase initialization failed. App cannot continue.");
         }
+
+        // ... (Rest des Skripts)
 
 
         // --- DOM Elements ---
